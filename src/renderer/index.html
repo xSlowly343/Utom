@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lost Ark Raid Manager</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/components.css">
+    <link rel="stylesheet" href="styles/themes.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div id="app">
+        <!-- Sidebar Navigation -->
+        <nav class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-dragon"></i>
+                    <span>Lost Ark</span>
+                </div>
+                <button class="sidebar-toggle" id="sidebarToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="nav-item active" data-page="dashboard">
+                    <a href="#dashboard">
+                        <i class="fas fa-tachometer-alt"></i>
+                        <span>Дашборд</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-page="raids">
+                    <a href="#raids">
+                        <i class="fas fa-users"></i>
+                        <span>Рейды</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-page="characters">
+                    <a href="#characters">
+                        <i class="fas fa-user-shield"></i>
+                        <span>Персонажи</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-page="schedule">
+                    <a href="#schedule">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>Расписание</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-page="chat">
+                    <a href="#chat">
+                        <i class="fas fa-comments"></i>
+                        <span>Чат</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-page="tools">
+                    <a href="#tools">
+                        <i class="fas fa-tools"></i>
+                        <span>Инструменты</span>
+                    </a>
+                </li>
+                <li class="nav-item" data-page="settings">
+                    <a href="#settings">
+                        <i class="fas fa-cog"></i>
+                        <span>Настройки</span>
+                    </a>
+                </li>
+            </ul>
+            
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <div class="avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="user-details">
+                        <span class="username">Игрок</span>
+                        <span class="status online">Онлайн</span>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content" id="mainContent">
+            <!-- Top Header -->
+            <header class="top-header">
+                <div class="header-left">
+                    <h1 id="pageTitle">Дашборд</h1>
+                    <div class="breadcrumb" id="breadcrumb">
+                        <span>Главная</span>
+                    </div>
+                </div>
+                
+                <div class="header-right">
+                    <div class="search-bar">
+                        <input type="text" placeholder="Поиск..." id="searchInput">
+                        <i class="fas fa-search"></i>
+                    </div>
+                    
+                    <div class="header-actions">
+                        <button class="btn btn-icon" id="notificationsBtn" title="Уведомления">
+                            <i class="fas fa-bell"></i>
+                            <span class="badge" id="notificationBadge">0</span>
+                        </button>
+                        
+                        <button class="btn btn-icon" id="quickActionsBtn" title="Быстрые действия">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        
+                        <div class="theme-toggle">
+                            <button class="btn btn-icon" id="themeToggle" title="Сменить тему">
+                                <i class="fas fa-moon"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Page Content -->
+            <div class="page-content" id="pageContent">
+                <!-- Dashboard Page -->
+                <div class="page active" id="dashboard">
+                    <div class="dashboard-grid">
+                        <!-- Quick Stats -->
+                        <div class="stats-cards">
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-users"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <h3>Активные рейды</h3>
+                                    <p class="stat-number" id="activeRaidsCount">0</p>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-user-shield"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <h3>Персонажи</h3>
+                                    <p class="stat-number" id="charactersCount">0</p>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-calendar-check"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <h3>Запланировано</h3>
+                                    <p class="stat-number" id="scheduledRaidsCount">0</p>
+                                </div>
+                            </div>
+                            
+                            <div class="stat-card">
+                                <div class="stat-icon">
+                                    <i class="fas fa-trophy"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <h3>Завершено</h3>
+                                    <p class="stat-number" id="completedRaidsCount">0</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Recent Activity -->
+                        <div class="dashboard-section">
+                            <h2>Последняя активность</h2>
+                            <div class="activity-list" id="recentActivity">
+                                <div class="activity-item">
+                                    <div class="activity-icon">
+                                        <i class="fas fa-info-circle"></i>
+                                    </div>
+                                    <div class="activity-content">
+                                        <p>Добро пожаловать в Lost Ark Raid Manager!</p>
+                                        <span class="activity-time">Сейчас</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="dashboard-section">
+                            <h2>Быстрые действия</h2>
+                            <div class="quick-actions">
+                                <button class="btn btn-primary" id="createRaidBtn">
+                                    <i class="fas fa-plus"></i>
+                                    Создать рейд
+                                </button>
+                                <button class="btn btn-secondary" id="addCharacterBtn">
+                                    <i class="fas fa-user-plus"></i>
+                                    Добавить персонажа
+                                </button>
+                                <button class="btn btn-secondary" id="scheduleRaidBtn">
+                                    <i class="fas fa-calendar-plus"></i>
+                                    Запланировать рейд
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Raids Page -->
+                <div class="page" id="raids">
+                    <div class="page-header">
+                        <h2>Управление рейдами</h2>
+                        <button class="btn btn-primary" id="newRaidBtn">
+                            <i class="fas fa-plus"></i>
+                            Новый рейд
+                        </button>
+                    </div>
+                    
+                    <div class="raids-container">
+                        <div class="raids-filters">
+                            <div class="filter-group">
+                                <label>Статус:</label>
+                                <select id="raidStatusFilter">
+                                    <option value="all">Все</option>
+                                    <option value="active">Активные</option>
+                                    <option value="scheduled">Запланированные</option>
+                                    <option value="completed">Завершенные</option>
+                                </select>
+                            </div>
+                            
+                            <div class="filter-group">
+                                <label>Тип:</label>
+                                <select id="raidTypeFilter">
+                                    <option value="all">Все</option>
+                                    <option value="legion">Легион</option>
+                                    <option value="abyss">Бездна</option>
+                                    <option value="guardian">Страж</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="raids-list" id="raidsList">
+                            <!-- Raids will be populated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Characters Page -->
+                <div class="page" id="characters">
+                    <div class="page-header">
+                        <h2>Мои персонажи</h2>
+                        <button class="btn btn-primary" id="addCharacterBtn">
+                            <i class="fas fa-plus"></i>
+                            Добавить персонажа
+                        </button>
+                    </div>
+                    
+                    <div class="characters-container">
+                        <div class="characters-grid" id="charactersGrid">
+                            <!-- Characters will be populated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Schedule Page -->
+                <div class="page" id="schedule">
+                    <div class="page-header">
+                        <h2>Расписание рейдов</h2>
+                        <button class="btn btn-primary" id="scheduleRaidBtn">
+                            <i class="fas fa-plus"></i>
+                            Запланировать рейд
+                        </button>
+                    </div>
+                    
+                    <div class="schedule-container">
+                        <div class="calendar-view" id="calendarView">
+                            <!-- Calendar will be populated here -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chat Page -->
+                <div class="page" id="chat">
+                    <div class="chat-container">
+                        <div class="chat-sidebar">
+                            <div class="chat-channels">
+                                <h3>Каналы</h3>
+                                <ul class="channel-list" id="channelList">
+                                    <li class="channel active" data-channel="general">
+                                        <i class="fas fa-hashtag"></i>
+                                        <span>Общий</span>
+                                    </li>
+                                    <li class="channel" data-channel="raids">
+                                        <i class="fas fa-users"></i>
+                                        <span>Рейды</span>
+                                    </li>
+                                    <li class="channel" data-channel="trading">
+                                        <i class="fas fa-coins"></i>
+                                        <span>Торговля</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <div class="online-users">
+                                <h3>Онлайн</h3>
+                                <ul class="users-list" id="onlineUsersList">
+                                    <!-- Online users will be populated here -->
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="chat-main">
+                            <div class="chat-header">
+                                <h3 id="currentChannelName">Общий</h3>
+                                <div class="chat-actions">
+                                    <button class="btn btn-icon" id="chatSettingsBtn">
+                                        <i class="fas fa-cog"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="chat-messages" id="chatMessages">
+                                <!-- Messages will be populated here -->
+                            </div>
+                            
+                            <div class="chat-input">
+                                <input type="text" placeholder="Написать сообщение..." id="messageInput">
+                                <button class="btn btn-primary" id="sendMessageBtn">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tools Page -->
+                <div class="page" id="tools">
+                    <div class="page-header">
+                        <h2>Инструменты</h2>
+                    </div>
+                    
+                    <div class="tools-grid">
+                        <div class="tool-card">
+                            <div class="tool-icon">
+                                <i class="fas fa-camera"></i>
+                            </div>
+                            <h3>Скриншот-анализ</h3>
+                            <p>Автоматическое определение текста и данных из скриншотов игры</p>
+                            <button class="btn btn-primary" id="screenshotToolBtn">
+                                Открыть
+                            </button>
+                        </div>
+                        
+                        <div class="tool-card">
+                            <div class="tool-icon">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <h3>AI Ассистент</h3>
+                            <p>Помощь в планировании рейдов и анализе персонажей</p>
+                            <button class="btn btn-primary" id="aiAssistantBtn">
+                                Открыть
+                            </button>
+                        </div>
+                        
+                        <div class="tool-card">
+                            <div class="tool-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <h3>Аналитика</h3>
+                            <p>Статистика и аналитика по рейдам и персонажам</p>
+                            <button class="btn btn-primary" id="analyticsBtn">
+                                Открыть
+                            </button>
+                        </div>
+                        
+                        <div class="tool-card">
+                            <div class="tool-icon">
+                                <i class="fas fa-download"></i>
+                            </div>
+                            <h3>Экспорт данных</h3>
+                            <p>Экспорт данных в различные форматы</p>
+                            <button class="btn btn-primary" id="exportDataBtn">
+                                Открыть
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Settings Page -->
+                <div class="page" id="settings">
+                    <div class="page-header">
+                        <h2>Настройки</h2>
+                    </div>
+                    
+                    <div class="settings-container">
+                        <div class="settings-section">
+                            <h3>Общие настройки</h3>
+                            <div class="setting-item">
+                                <label>Язык интерфейса</label>
+                                <select id="languageSelect">
+                                    <option value="ru">Русский</option>
+                                    <option value="en">English</option>
+                                </select>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>Тема</label>
+                                <select id="themeSelect">
+                                    <option value="auto">Авто</option>
+                                    <option value="light">Светлая</option>
+                                    <option value="dark">Темная</option>
+                                </select>
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>Уведомления</label>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="notificationsToggle" checked>
+                                    <span class="slider"></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-section">
+                            <h3>Настройки игры</h3>
+                            <div class="setting-item">
+                                <label>Сервер</label>
+                                <input type="text" id="serverInput" placeholder="Введите название сервера">
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>Авто-обновление данных</label>
+                                <div class="toggle-switch">
+                                    <input type="checkbox" id="autoUpdateToggle" checked>
+                                    <span class="slider"></span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="settings-section">
+                            <h3>Интеграции</h3>
+                            <div class="setting-item">
+                                <label>Discord Webhook</label>
+                                <input type="text" id="discordWebhookInput" placeholder="Discord webhook URL">
+                            </div>
+                            
+                            <div class="setting-item">
+                                <label>Telegram Bot</label>
+                                <input type="text" id="telegramBotInput" placeholder="Telegram bot token">
+                            </div>
+                        </div>
+                        
+                        <div class="settings-actions">
+                            <button class="btn btn-primary" id="saveSettingsBtn">
+                                Сохранить настройки
+                            </button>
+                            <button class="btn btn-secondary" id="resetSettingsBtn">
+                                Сбросить
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="modalOverlay">
+        <!-- New Raid Modal -->
+        <div class="modal" id="newRaidModal">
+            <div class="modal-header">
+                <h3>Создать новый рейд</h3>
+                <button class="modal-close" id="closeNewRaidModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <form id="newRaidForm">
+                    <div class="form-group">
+                        <label>Название рейда</label>
+                        <input type="text" id="raidNameInput" required>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Тип рейда</label>
+                            <select id="raidTypeInput" required>
+                                <option value="legion">Легион</option>
+                                <option value="abyss">Бездна</option>
+                                <option value="guardian">Страж</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Дата и время</label>
+                            <input type="datetime-local" id="raidDateTimeInput" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Описание</label>
+                        <textarea id="raidDescriptionInput" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Максимум участников</label>
+                        <input type="number" id="raidMaxPlayersInput" min="1" max="20" value="8">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelNewRaidBtn">Отмена</button>
+                <button class="btn btn-primary" id="createRaidBtn">Создать рейд</button>
+            </div>
+        </div>
+    </div>
+
+                <!-- Scripts -->
+    <script src="js/app.js"></script>
+    <script src="js/navigation.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/raids.js"></script>
+    <script src="js/characters.js"></script>
+    <script src="js/schedule.js"></script>
+    <script src="js/chat.js"></script>
+    <script src="js/tools.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/notifications.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/ocr.js"></script>
+    <script src="js/ai-assistant.js"></script>
+        <script src="js/schedule.js"></script>
+        <script src="js/notifications.js"></script>
+        <script src="../services/database.js"></script>
+        <script src="../services/textRecognition.js"></script>
+        <script src="../config/app.config.js"></script>
+</body>
+</html>
