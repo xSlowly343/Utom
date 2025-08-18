@@ -155,26 +155,97 @@ class ChatSystem {
 
     initializeWebSocket() {
         try {
-            // Simulate WebSocket connection for demo
-            this.socket = {
-                send: (data) => {
-                    console.log('WebSocket send:', data);
-                    // Simulate message delivery
-                    setTimeout(() => {
-                        this.handleIncomingMessage(JSON.parse(data));
-                    }, 100);
-                },
-                close: () => {
-                    this.isConnected = false;
-                    console.log('WebSocket disconnected');
-                }
-            };
-            this.isConnected = true;
-            console.log('WebSocket connected (simulated)');
+            // Проверяем, есть ли глобальный WebSocket клиент
+            if (window.wsClient && window.wsClient.isConnected) {
+                this.socket = window.wsClient;
+                this.isConnected = true;
+                console.log('WebSocket: Используем глобальный клиент');
+                
+                // Подписываемся на события WebSocket
+                this.setupWebSocketHandlers();
+            } else {
+                console.log('WebSocket: Глобальный клиент недоступен, используем симуляцию');
+                this.initializeSimulatedWebSocket();
+            }
         } catch (error) {
             console.error('WebSocket connection failed:', error);
             this.isConnected = false;
+            this.initializeSimulatedWebSocket();
         }
+    }
+
+    initializeSimulatedWebSocket() {
+        // Fallback к симуляции для демо
+        this.socket = {
+            send: (data) => {
+                console.log('WebSocket send (simulated):', data);
+                setTimeout(() => {
+                    this.handleIncomingMessage(JSON.parse(data));
+                }, 100);
+            },
+            close: () => {
+                this.isConnected = false;
+                console.log('WebSocket disconnected (simulated)');
+            }
+        };
+        this.isConnected = true;
+        console.log('WebSocket connected (simulated)');
+    }
+
+    setupWebSocketHandlers() {
+        if (!window.wsClient) return;
+
+        // Обработчик сообщений чата
+        window.wsClient.on('chat_message', (message) => {
+            this.handleIncomingMessage({
+                type: 'chat_message',
+                channelId: message.roomId,
+                message: message
+            });
+        });
+
+        // Обработчик истории комнаты
+        window.wsClient.on('room_history', (data) => {
+            this.handleIncomingMessage({
+                type: 'room_history',
+                channelId: data.roomId,
+                messages: data.messages
+            });
+        });
+
+        // Обработчик присоединения пользователя
+        window.wsClient.on('user_joined', (data) => {
+            this.handleIncomingMessage({
+                type: 'user_joined',
+                user: data.user
+            });
+        });
+
+        // Обработчик выхода пользователя
+        window.wsClient.on('user_left', (data) => {
+            this.handleIncomingMessage({
+                type: 'user_left',
+                userId: data.user.id
+            });
+        });
+
+        // Обработчик начала печати
+        window.wsClient.on('typing_start', (data) => {
+            this.handleIncomingMessage({
+                type: 'typing_start',
+                userId: data.user.id
+            });
+        });
+
+        // Обработчик окончания печати
+        window.wsClient.on('typing_stop', (data) => {
+            this.handleIncomingMessage({
+                type: 'typing_stop',
+                userId: data.user.id
+            });
+        });
+
+        console.log('WebSocket: Обработчики настроены');
     }
 
     bindEvents() {
@@ -231,8 +302,19 @@ class ChatSystem {
         const channel = this.channels.find(c => c.id === channelId);
         if (!channel) return;
 
+        // Покидаем предыдущий канал
+        if (this.currentChannel && this.socket && this.socket.leaveRoom) {
+            this.socket.leaveRoom(this.currentChannel.id);
+        }
+
         this.currentChannel = channel;
         this.currentPrivateChat = null;
+
+        // Присоединяемся к новому каналу через WebSocket
+        if (this.socket && this.socket.joinRoom) {
+            this.socket.joinRoom(channelId, 'chat');
+            console.log(`WebSocket: Присоединились к каналу ${channel.name}`);
+        }
 
         // Load channel messages
         if (!this.messages[channelId]) {
@@ -306,11 +388,17 @@ class ChatSystem {
         
         // Send via WebSocket
         if (this.socket && this.isConnected) {
-            this.socket.send(JSON.stringify({
-                type: 'channel_message',
-                channelId: channelId,
-                message: messageData
-            }));
+            if (this.socket.sendChatMessage) {
+                // Используем реальный WebSocket
+                this.socket.sendChatMessage(channelId, messageData.text, 'text');
+            } else {
+                // Fallback к старому методу
+                this.socket.send(JSON.stringify({
+                    type: 'channel_message',
+                    channelId: channelId,
+                    message: messageData
+                }));
+            }
         }
 
         this.renderMessages();

@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/components.css">
     <link rel="stylesheet" href="styles/themes.css">
+    <link rel="stylesheet" href="styles/auth.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 </head>
 <body>
@@ -96,6 +97,11 @@
                     <div class="search-bar">
                         <input type="text" placeholder="Поиск..." id="searchInput">
                         <i class="fas fa-search"></i>
+                    </div>
+                    
+                    <!-- Аутентификация -->
+                    <div class="auth-section" id="authContainer">
+                        <!-- Здесь будет форма входа/профиль -->
                     </div>
                     
                     <div class="header-actions">
@@ -526,10 +532,7 @@
     <script src="js/database.js"></script>
     <script src="js/ocr.js"></script>
     <script src="js/ai-assistant.js"></script>
-        <script src="js/schedule.js"></script>
-        <script src="js/notifications.js"></script>
-        <script src="../services/database.js"></script>
-        <script src="../services/textRecognition.js"></script>
-        <script src="../config/app.config.js"></script>
+    <script src="js/websocket-client.js"></script>
+    <script src="js/auth.js"></script>
 </body>
 </html>

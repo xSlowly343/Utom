@@ -231,6 +231,9 @@ class RaidsManager {
             createRaidBtn.addEventListener('click', () => this.showCreateRaidModal());
         }
 
+        // WebSocket обработчики для обновлений рейдов
+        this.setupWebSocketHandlers();
+
         // Raid form submission
         const raidForm = document.getElementById('raidForm');
         if (raidForm) {
@@ -349,6 +352,12 @@ class RaidsManager {
 
         // Log the action
         this.logRaidAction('create', newRaid);
+
+        // Отправляем обновление через WebSocket
+        if (window.wsClient && window.wsClient.isConnected) {
+            window.wsClient.sendRaidUpdate(newRaid.id, 'create', newRaid);
+            console.log('WebSocket: Отправлено обновление рейда');
+        }
     }
 
     joinRaid(raidId) {
@@ -861,6 +870,63 @@ class RaidsManager {
             cancelled,
             completionRate: total > 0 ? Math.round((completed / total) * 100) : 0
         };
+    }
+
+    setupWebSocketHandlers() {
+        if (!window.wsClient) return;
+
+        // Обработчик обновлений рейдов
+        window.wsClient.on('raid_update', (data) => {
+            this.handleRaidUpdate(data);
+        });
+
+        console.log('Raids: WebSocket обработчики настроены');
+    }
+
+    handleRaidUpdate(data) {
+        const { raidId, action, raidData, user } = data;
+        
+        console.log(`WebSocket: Обновление рейда ${action}`, raidData);
+
+        switch (action) {
+            case 'create':
+                // Новый рейд создан другим пользователем
+                if (!this.raids.find(r => r.id === raidId)) {
+                    this.raids.unshift(raidData);
+                    this.saveRaids();
+                    this.render();
+                    
+                    if (window.notifications) {
+                        window.notifications.show(`Новый рейд: ${raidData.name}`, 'info');
+                    }
+                }
+                break;
+                
+            case 'update':
+                // Рейд обновлен
+                const raidIndex = this.raids.findIndex(r => r.id === raidId);
+                if (raidIndex !== -1) {
+                    this.raids[raidIndex] = { ...this.raids[raidIndex], ...raidData };
+                    this.saveRaids();
+                    this.render();
+                    
+                    if (window.notifications) {
+                        window.notifications.show(`Рейд обновлен: ${raidData.name || 'Неизвестно'}`, 'info');
+                    }
+                }
+                break;
+                
+            case 'delete':
+                // Рейд удален
+                this.raids = this.raids.filter(r => r.id !== raidId);
+                this.saveRaids();
+                this.render();
+                
+                if (window.notifications) {
+                    window.notifications.show('Рейд удален', 'warning');
+                }
+                break;
+        }
     }
 }
 

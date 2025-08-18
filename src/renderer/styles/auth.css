@@ -1,0 +1,313 @@
+/* Стили для модуля аутентификации */
+
+.auth-section {
+    display: flex;
+    align-items: center;
+    margin-left: 20px;
+}
+
+/* Формы аутентификации */
+.auth-forms {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    min-width: 300px;
+}
+
+.auth-tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 12px 20px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border-bottom: 2px solid transparent;
+}
+
+.tab-btn.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+}
+
+.tab-btn:hover {
+    color: var(--primary-color);
+}
+
+/* Формы */
+.auth-form {
+    display: block;
+}
+
+.auth-form h3 {
+    margin: 0 0 20px 0;
+    color: var(--text-primary);
+    font-size: 18px;
+    font-weight: 600;
+    text-align: center;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.1);
+}
+
+.form-group input:invalid {
+    border-color: var(--error-color);
+}
+
+.btn-block {
+    width: 100%;
+    padding: 14px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: 20px;
+}
+
+.form-hint {
+    margin-top: 16px;
+    padding: 12px;
+    background: var(--info-bg);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    text-align: center;
+    border-left: 4px solid var(--info-color);
+}
+
+/* Профиль пользователя */
+.auth-profile {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    min-width: 280px;
+}
+
+.profile-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.profile-avatar {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: var(--primary-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 16px;
+    font-size: 24px;
+    color: white;
+}
+
+.profile-info h3 {
+    margin: 0 0 4px 0;
+    color: var(--text-primary);
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.profile-role {
+    display: inline-block;
+    padding: 4px 8px;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.profile-email {
+    display: block;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.profile-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.profile-actions .btn {
+    width: 100%;
+    justify-content: center;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .auth-section {
+        margin-left: 0;
+        margin-top: 20px;
+    }
+    
+    .auth-forms,
+    .auth-profile {
+        min-width: 100%;
+        margin: 0 20px;
+    }
+    
+    .profile-header {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .profile-avatar {
+        margin-right: 0;
+        margin-bottom: 16px;
+    }
+}
+
+/* Темы */
+[data-theme="dark"] .auth-forms,
+[data-theme="dark"] .auth-profile {
+    background: var(--card-bg-dark);
+    border: 1px solid var(--border-color-dark);
+}
+
+[data-theme="dark"] .form-group input {
+    background: var(--input-bg-dark);
+    border-color: var(--border-color-dark);
+    color: var(--text-primary-dark);
+}
+
+[data-theme="dark"] .form-hint {
+    background: var(--info-bg-dark);
+    color: var(--text-secondary-dark);
+}
+
+[data-theme="cyberpunk"] .auth-forms,
+[data-theme="cyberpunk"] .auth-profile {
+    background: var(--card-bg-cyberpunk);
+    border: 2px solid var(--accent-color-cyberpunk);
+    box-shadow: 0 0 20px rgba(var(--accent-rgb-cyberpunk), 0.3);
+}
+
+[data-theme="cyberpunk"] .tab-btn.active {
+    color: var(--accent-color-cyberpunk);
+    border-bottom-color: var(--accent-color-cyberpunk);
+    text-shadow: 0 0 10px var(--accent-color-cyberpunk);
+}
+
+[data-theme="cyberpunk"] .form-group input:focus {
+    border-color: var(--accent-color-cyberpunk);
+    box-shadow: 0 0 0 3px rgba(var(--accent-rgb-cyberpunk), 0.2);
+}
+
+[data-theme="nature"] .auth-forms,
+[data-theme="nature"] .auth-profile {
+    background: var(--card-bg-nature);
+    border: 2px solid var(--accent-color-nature);
+}
+
+[data-theme="nature"] .profile-avatar {
+    background: var(--accent-color-nature);
+}
+
+[data-theme="professional"] .auth-forms,
+[data-theme="professional"] .auth-profile {
+    background: var(--card-bg-professional);
+    border: 1px solid var(--border-color-professional);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* Анимации */
+.auth-forms,
+.auth-profile {
+    animation: slideInUp 0.3s ease-out;
+}
+
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.form-group input {
+    transition: all 0.2s ease;
+}
+
+.form-group input:hover {
+    border-color: var(--primary-color);
+}
+
+/* Состояния загрузки */
+.btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.btn .fa-spinner {
+    margin-right: 8px;
+}
+
+/* Валидация */
+.form-group input.error {
+    border-color: var(--error-color);
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+/* Уведомления об ошибках */
+.form-error {
+    color: var(--error-color);
+    font-size: 12px;
+    margin-top: 4px;
+    display: flex;
+    align-items: center;
+}
+
+.form-error::before {
+    content: '⚠';
+    margin-right: 6px;
+    font-size: 14px;
+}
