@@ -6,6 +6,7 @@
 const SQLiteDatabaseAdapter = require('./database');
 const MySQLDatabaseAdapter = require('./mysql-adapter');
 const MongoDBDatabaseAdapter = require('./mongodb-adapter');
+const PostgreSQLDatabaseAdapter = require('./postgresql-adapter');
 
 class DatabaseFactory {
     static async createDatabase(type, config) {
@@ -31,6 +32,13 @@ class DatabaseFactory {
                     adapter = new MongoDBDatabaseAdapter(config);
                     break;
                     
+                case 'postgresql':
+                case 'postgres':
+                case 'psql':
+                    console.log('DatabaseFactory: Создаем PostgreSQL адаптер');
+                    adapter = new PostgreSQLDatabaseAdapter(config);
+                    break;
+                    
                 default:
                     throw new Error(`Неподдерживаемый тип базы данных: ${type}`);
             }
@@ -48,7 +56,7 @@ class DatabaseFactory {
     }
     
     static getSupportedTypes() {
-        return ['sqlite', 'mysql', 'mongodb'];
+        return ['sqlite', 'mysql', 'mongodb', 'postgresql'];
     }
     
     static getDefaultConfig(type) {
@@ -71,6 +79,16 @@ class DatabaseFactory {
                 return {
                     url: 'mongodb://localhost:27017',
                     database: 'lost_ark_manager'
+                };
+                
+            case 'postgresql':
+                return {
+                    host: 'localhost',
+                    port: 5432,
+                    user: 'postgres',
+                    password: '',
+                    database: 'lost_ark_manager',
+                    schema: 'lost_ark_manager'
                 };
                 
             default:
