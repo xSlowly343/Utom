@@ -1,6 +1,7 @@
 const { app, BrowserWindow, Menu, ipcMain, dialog, globalShortcut } = require('electron');
 const path = require('path');
 const isDev = process.argv.includes('--dev');
+const PerformanceManager = require('./optimization/performance-manager');
 
 // Keep a global reference of the window object
 let mainWindow;
@@ -225,6 +226,10 @@ function createMenu() {
 app.whenReady().then(() => {
   createWindow();
   createMenu();
+  
+  // Инициализируем менеджер производительности
+  global.performanceManager = new PerformanceManager();
+  console.log('Main: PerformanceManager инициализирован');
 });
 
 app.on('window-all-closed', () => {
@@ -285,6 +290,44 @@ ipcMain.handle('show-save-dialog', async (event, options) => {
   } catch (error) {
     console.error('Error showing save dialog:', error);
     return { canceled: true, filePath: '', error: error.message };
+  }
+});
+
+// IPC handlers for PerformanceManager
+ipcMain.handle('get-performance-metrics', () => {
+  try {
+    if (global.performanceManager) {
+      return global.performanceManager.getMetrics();
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting performance metrics:', error);
+    return null;
+  }
+});
+
+ipcMain.handle('get-performance-report', () => {
+  try {
+    if (global.performanceManager) {
+      return global.performanceManager.generateReport();
+    }
+    return null;
+  } catch (error) {
+    console.error('Error getting performance report:', error);
+    return null;
+  }
+});
+
+ipcMain.handle('set-performance-optimization', (event, name, enabled) => {
+  try {
+    if (global.performanceManager) {
+      global.performanceManager.setOptimization(name, enabled);
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error setting performance optimization:', error);
+    return false;
   }
 });
 

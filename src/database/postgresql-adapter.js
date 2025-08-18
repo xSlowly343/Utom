@@ -390,6 +390,39 @@ class PostgreSQLDatabaseAdapter {
         }
     }
 
+    async updateUser(id, updates) {
+        try {
+            const fields = [];
+            const values = [];
+            let paramIndex = 1;
+            
+            for (const [key, value] of Object.entries(updates)) {
+                if (key === 'preferences') {
+                    fields.push(`${key} = $${paramIndex}`);
+                    values.push(JSON.stringify(value));
+                } else {
+                    fields.push(`${key} = $${paramIndex}`);
+                    values.push(value);
+                }
+                paramIndex++;
+            }
+            
+            fields.push('updated_at = CURRENT_TIMESTAMP');
+            values.push(id);
+            
+            await this.pool.query(`
+                UPDATE lost_ark_manager.users 
+                SET ${fields.join(', ')} 
+                WHERE id = $${paramIndex}
+            `, values);
+            
+            return true;
+        } catch (error) {
+            console.error('PostgreSQL: Ошибка обновления пользователя:', error);
+            throw error;
+        }
+    }
+
     // Методы для работы с персонажами
     async createCharacter(characterData) {
         try {
@@ -605,6 +638,23 @@ class PostgreSQLDatabaseAdapter {
             return result.rows[0].id;
         } catch (error) {
             console.error('PostgreSQL: Ошибка создания канала:', error);
+            throw error;
+        }
+    }
+
+    async getAllChannels() {
+        try {
+            const result = await this.pool.query(`
+                SELECT * FROM lost_ark_manager.chat_channels
+                ORDER BY created_at DESC
+            `);
+            
+            return result.rows.map(row => ({
+                ...row,
+                settings: row.settings || {}
+            }));
+        } catch (error) {
+            console.error('PostgreSQL: Ошибка получения каналов:', error);
             throw error;
         }
     }

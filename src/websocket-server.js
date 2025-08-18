@@ -7,6 +7,8 @@ const WebSocket = require('ws');
 const http = require('http');
 const url = require('url');
 const jwt = require('jsonwebtoken');
+const DatabaseFactory = require('./database/database-factory');
+const config = require('./config/database.config');
 
 class WebSocketServer {
     constructor(port = 8080) {
@@ -16,11 +18,25 @@ class WebSocketServer {
         this.messageHistory = new Map(); // roomId -> Array of messages
         this.server = null;
         this.wss = null;
+        this.database = null;
         
         this.init();
     }
 
-    init() {
+    async init() {
+        try {
+            // Инициализируем базу данных
+            this.database = await DatabaseFactory.createDatabase(config.type, config.getConfig());
+            console.log('WebSocket: База данных инициализирована');
+            
+            // Загружаем существующие каналы и сообщения
+            await this.loadExistingData();
+            
+        } catch (error) {
+            console.error('WebSocket: Ошибка инициализации БД:', error);
+            console.log('WebSocket: Работаем без базы данных');
+        }
+
         // Создаем HTTP сервер
         this.server = http.createServer();
         
@@ -32,6 +48,30 @@ class WebSocketServer {
 
         this.setupEventHandlers();
         this.start();
+    }
+
+    async loadExistingData() {
+        try {
+            if (!this.database) return;
+
+            // Загружаем существующие каналы
+            const channels = await this.database.getAllChannels();
+            for (const channel of channels) {
+                this.rooms.set(channel.id.toString(), new Set());
+                this.messageHistory.set(channel.id.toString(), []);
+                console.log(`WebSocket: Загружен канал: ${channel.name}`);
+            }
+
+            // Загружаем последние сообщения для каждого канала
+            for (const channelId of this.rooms.keys()) {
+                const messages = await this.database.getChannelMessages(parseInt(channelId), 50);
+                this.messageHistory.set(channelId, messages);
+            }
+
+            console.log('WebSocket: Существующие данные загружены');
+        } catch (error) {
+            console.error('WebSocket: Ошибка загрузки данных:', error);
+        }
     }
 
     verifyClient(info) {
@@ -128,43 +168,51 @@ class WebSocketServer {
         });
     }
 
-    handleMessage(clientId, message) {
+    async handleMessage(clientId, message) {
         const client = this.clients.get(clientId);
         if (!client) return;
 
         console.log(`Message from ${client.user.name}:`, message.type);
 
-        switch (message.type) {
-            case 'join_room':
-                this.handleJoinRoom(clientId, message.data);
-                break;
-            case 'leave_room':
-                this.handleLeaveRoom(clientId, message.data);
-                break;
-            case 'chat_message':
-                this.handleChatMessage(clientId, message.data);
-                break;
-            case 'typing_start':
-                this.handleTypingStart(clientId, message.data);
-                break;
-            case 'typing_stop':
-                this.handleTypingStop(clientId, message.data);
-                break;
-            case 'raid_update':
-                this.handleRaidUpdate(clientId, message.data);
-                break;
-            case 'notification':
-                this.handleNotification(clientId, message.data);
-                break;
-            case 'ping':
-                this.sendToClient(clientId, { type: 'pong', data: { timestamp: Date.now() } });
-                break;
-            default:
-                console.log(`Unknown message type: ${message.type}`);
+        try {
+            switch (message.type) {
+                case 'join_room':
+                    await this.handleJoinRoom(clientId, message.data);
+                    break;
+                case 'leave_room':
+                    await this.handleLeaveRoom(clientId, message.data);
+                    break;
+                case 'chat_message':
+                    await this.handleChatMessage(clientId, message.data);
+                    break;
+                case 'typing_start':
+                    await this.handleTypingStart(clientId, message.data);
+                    break;
+                case 'typing_stop':
+                    await this.handleTypingStop(clientId, message.data);
+                    break;
+                case 'raid_update':
+                    await this.handleRaidUpdate(clientId, message.data);
+                    break;
+                case 'notification':
+                    await this.handleNotification(clientId, message.data);
+                    break;
+                case 'ping':
+                    this.sendToClient(clientId, { type: 'pong', data: { timestamp: Date.now() } });
+                    break;
+                default:
+                    console.log(`Unknown message type: ${message.type}`);
+            }
+        } catch (error) {
+            console.error('WebSocket: Ошибка обработки сообщения:', error);
+            this.sendToClient(clientId, message.type, {
+                type: 'error',
+                data: { message: 'Ошибка обработки сообщения' }
+            });
         }
     }
 
-    handleJoinRoom(clientId, data) {
+    async handleJoinRoom(clientId, data) {
         const { roomId, roomType } = data;
         const client = this.clients.get(clientId);
         
@@ -174,6 +222,20 @@ class WebSocketServer {
         if (!this.rooms.has(roomId)) {
             this.rooms.set(roomId, new Set());
             this.messageHistory.set(roomId, []);
+            
+            // Создаем канал в базе данных
+            if (this.database) {
+                try {
+                    await this.database.createChannel({
+                        name: `Канал ${roomId}`,
+                        type: roomType || 'public',
+                        createdBy: parseInt(client.user.id)
+                    });
+                    console.log(`WebSocket: Канал создан в БД: ${roomId}`);
+                } catch (error) {
+                    console.error('WebSocket: Ошибка создания канала в БД:', error);
+                }
+            }
         }
 
         // Добавляем клиента в комнату
@@ -225,7 +287,7 @@ class WebSocketServer {
         }
     }
 
-    handleChatMessage(clientId, data) {
+    async handleChatMessage(clientId, data) {
         const { roomId, text, messageType = 'text' } = data;
         const client = this.clients.get(clientId);
         
@@ -240,6 +302,25 @@ class WebSocketServer {
             type: messageType,
             timestamp: Date.now()
         };
+
+        // Сохраняем сообщение в базе данных
+        if (this.database) {
+            try {
+                await this.database.saveMessage({
+                    channelId: parseInt(roomId),
+                    userId: parseInt(client.user.id),
+                    message: text,
+                    messageType: messageType,
+                    metadata: {
+                        userName: client.user.name,
+                        timestamp: message.timestamp
+                    }
+                });
+                console.log(`WebSocket: Сообщение сохранено в БД`);
+            } catch (error) {
+                console.error('WebSocket: Ошибка сохранения сообщения в БД:', error);
+            }
+        }
 
         // Сохраняем сообщение в истории
         if (!this.messageHistory.has(roomId)) {
@@ -293,11 +374,29 @@ class WebSocketServer {
         }, [clientId]);
     }
 
-    handleRaidUpdate(clientId, data) {
+    async handleRaidUpdate(clientId, data) {
         const { raidId, action, raidData } = data;
         const client = this.clients.get(clientId);
         
         if (!client) return;
+
+        // Логируем действие в базе данных
+        if (this.database) {
+            try {
+                await this.database.logRaidAction(
+                    parseInt(raidId),
+                    parseInt(client.user.id),
+                    action,
+                    {
+                        raidData,
+                        timestamp: Date.now()
+                    }
+                );
+                console.log(`WebSocket: Действие с рейдом залогировано в БД`);
+            } catch (error) {
+                console.error('WebSocket: Ошибка логирования действия с рейдом:', error);
+            }
+        }
 
         // Отправляем обновление всем клиентам
         this.broadcastToAll({
@@ -314,7 +413,7 @@ class WebSocketServer {
         console.log(`Raid update: ${action} by ${client.user.name}`);
     }
 
-    handleNotification(clientId, data) {
+    async handleNotification(clientId, data) {
         const { targetUsers, message, type = 'info' } = data;
         const client = this.clients.get(clientId);
         
@@ -327,6 +426,27 @@ class WebSocketServer {
             from: client.user,
             timestamp: Date.now()
         };
+
+        // Сохраняем уведомление в базе данных
+        if (this.database && targetUsers && targetUsers.length > 0) {
+            try {
+                for (const userId of targetUsers) {
+                    await this.database.createNotification(
+                        parseInt(userId),
+                        'Уведомление',
+                        message,
+                        type,
+                        {
+                            from: client.user.name,
+                            timestamp: notification.timestamp
+                        }
+                    );
+                }
+                console.log(`WebSocket: Уведомления сохранены в БД`);
+            } catch (error) {
+                console.error('WebSocket: Ошибка сохранения уведомлений в БД:', error);
+            }
+        }
 
         if (targetUsers && targetUsers.length > 0) {
             // Отправляем конкретным пользователям
