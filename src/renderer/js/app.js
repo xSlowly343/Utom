@@ -10,6 +10,11 @@ class LostArkRaidManager {
 
     async init() {
         try {
+            // Проверяем доступность критических модулей
+            if (!this.checkCriticalModules()) {
+                throw new Error('Критические модули недоступны');
+            }
+            
             // Initialize settings
             await this.loadSettings();
             
@@ -32,6 +37,9 @@ class LostArkRaidManager {
         } catch (error) {
             console.error('Failed to initialize application:', error);
             this.showError('Ошибка инициализации приложения');
+            
+            // Пытаемся показать fallback страницу
+            this.showFallbackPage();
         }
     }
 
@@ -97,6 +105,43 @@ class LostArkRaidManager {
                 return 'fas fa-adjust';
             default:
                 return 'fas fa-adjust';
+        }
+    }
+
+    // Проверка критических модулей
+    checkCriticalModules() {
+        const criticalModules = ['navigation', 'stateManager'];
+        const missingModules = criticalModules.filter(module => !window[module]);
+        
+        if (missingModules.length > 0) {
+            console.error('App: Отсутствуют критические модули:', missingModules);
+            return false;
+        }
+        
+        return true;
+    }
+
+    // Показать fallback страницу при ошибке
+    showFallbackPage() {
+        const mainContent = document.getElementById('mainContent');
+        if (mainContent) {
+            mainContent.innerHTML = `
+                <div class="fallback-container">
+                    <div class="fallback-content">
+                        <div class="fallback-icon">🚨</div>
+                        <h2>Ошибка инициализации</h2>
+                        <p>Приложение не может быть запущено из-за проблем с критическими модулями.</p>
+                        <div class="fallback-actions">
+                            <button class="btn btn-primary" onclick="location.reload()">
+                                🔄 Перезагрузить
+                            </button>
+                            <button class="btn btn-secondary" onclick="window.errorBoundary?.showErrorReport()">
+                                📋 Отправить отчет
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
     }
 

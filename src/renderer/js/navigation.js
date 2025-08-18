@@ -73,24 +73,37 @@ class Navigation {
     }
 
     navigateTo(pageName) {
-        if (pageName === this.currentPage) {
-            return; // Already on this page
-        }
+        try {
+            if (pageName === this.currentPage) {
+                return; // Already on this page
+            }
 
-        // Add to history
-        this.addToHistory(this.currentPage);
-        
-        // Navigate to new page
-        this.setCurrentPage(pageName);
-        
-        // Update browser history
-        this.updateBrowserHistory(pageName);
-        
-        // Show the page
-        this.showPage(pageName);
-        
-        // Trigger navigation event
-        this.triggerNavigationEvent(pageName);
+            // Validate page name
+            if (!this.isValidPage(pageName)) {
+                console.error(`Navigation: Неизвестная страница: ${pageName}`);
+                this.showPageNotFound(pageName);
+                return;
+            }
+
+            // Add to history
+            this.addToHistory(this.currentPage);
+            
+            // Navigate to new page
+            this.setCurrentPage(pageName);
+            
+            // Update browser history
+            this.updateBrowserHistory(pageName);
+            
+            // Show the page
+            this.showPage(pageName);
+            
+            // Trigger navigation event
+            this.triggerNavigationEvent(pageName);
+            
+        } catch (error) {
+            console.error('Navigation: Ошибка навигации:', error);
+            this.handleNavigationError(error, pageName);
+        }
     }
 
     setCurrentPage(pageName) {
@@ -438,6 +451,71 @@ class Navigation {
     createErrorNotification(message) {
         // Implementation for error notification
         console.log('Error notification created:', message);
+    }
+
+    // Обработка ошибок навигации
+    handleNavigationError(error, pageName) {
+        console.error(`Navigation: Ошибка при переходе на страницу ${pageName}:`, error);
+        
+        // Показываем fallback страницу
+        this.showNavigationErrorPage(pageName, error.message);
+        
+        // Уведомляем ErrorBoundary если доступен
+        if (window.errorBoundary) {
+            window.errorBoundary.handleError(error, `navigation.navigateTo.${pageName}`);
+        }
+    }
+
+    // Показать страницу ошибки навигации
+    showNavigationErrorPage(pageName, errorMessage) {
+        const mainContent = document.getElementById('mainContent');
+        if (mainContent) {
+            mainContent.innerHTML = `
+                <div class="fallback-container">
+                    <div class="fallback-content">
+                        <div class="fallback-icon">⚠️</div>
+                        <h2>Ошибка навигации</h2>
+                        <p>Не удалось загрузить страницу "${pageName}".</p>
+                        <p class="error-details">${errorMessage}</p>
+                        <div class="fallback-actions">
+                            <button class="btn btn-primary" onclick="window.navigation.navigateTo('dashboard')">
+                                🏠 На главную
+                            </button>
+                            <button class="btn btn-secondary" onclick="window.history.back()">
+                                ⬅️ Назад
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    // Показать страницу "не найдено"
+    showPageNotFound(pageName) {
+        const mainContent = document.getElementById('mainContent');
+        if (mainContent) {
+            mainContent.innerHTML = `
+                <div class="fallback-container">
+                    <div class="fallback-content">
+                        <div class="fallback-icon">❓</div>
+                        <h2>Страница не найдена</h2>
+                        <p>Страница "${pageName}" не существует или была удалена.</p>
+                        <div class="fallback-actions">
+                            <button class="btn btn-primary" onclick="window.navigation.navigateTo('dashboard')">
+                                🏠 На главную
+                            </button>
+                            <button class="btn btn-secondary" onclick="window.history.back()">
+                                ⬅️ Назад
+                            </button>
+                            <button class="btn btn-info" onclick="window.errorBoundary?.showErrorReport()">
+                                📋 Отправить отчет
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
     }
 
     // Utility methods
