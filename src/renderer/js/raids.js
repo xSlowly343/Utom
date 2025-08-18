@@ -26,10 +26,27 @@ class RaidsManager {
         this.loadRaidLogs();
     }
 
-    loadRaids() {
+    async loadRaids() {
         try {
-            const saved = localStorage.getItem('raids');
-            this.raids = saved ? JSON.parse(saved) : this.getDefaultRaids();
+            if (window.databaseManager) {
+                // Используем базу данных
+                this.raids = await window.databaseManager.getAllRaids();
+                console.log('Raids: Загружено из БД:', this.raids.length);
+                
+                // Если рейдов нет, создаем демо
+                if (this.raids.length === 0) {
+                    this.raids = this.getDefaultRaids();
+                    // Сохраняем демо рейды в БД
+                    for (const raid of this.raids) {
+                        await window.databaseManager.createRaid(raid);
+                    }
+                }
+            } else {
+                // Fallback к localStorage
+                const saved = localStorage.getItem('raids');
+                this.raids = saved ? JSON.parse(saved) : this.getDefaultRaids();
+                console.log('Raids: Fallback к localStorage');
+            }
         } catch (error) {
             console.error('Error loading raids:', error);
             this.raids = this.getDefaultRaids();
@@ -332,31 +349,45 @@ class RaidsManager {
         e.target.reset();
     }
 
-    createRaid(raidData) {
-        const newRaid = {
-            id: Date.now(),
-            ...raidData,
-            status: 'Scheduled',
-            participants: [],
-            notes: '',
-            createdAt: new Date().toISOString()
-        };
+    async createRaid(raidData) {
+        try {
+            const newRaid = {
+                id: Date.now(),
+                ...raidData,
+                status: 'Scheduled',
+                participants: [],
+                notes: '',
+                createdAt: new Date().toISOString()
+            };
 
-        this.raids.push(newRaid);
-        this.saveRaids();
-        this.render();
-        
-        if (window.notifications) {
-            window.notifications.show('Рейд создан', 'success');
-        }
+            if (window.databaseManager) {
+                // Сохраняем в БД
+                const dbId = await window.databaseManager.createRaid(newRaid);
+                newRaid.id = dbId;
+                console.log('Raids: Рейд сохранен в БД с ID:', dbId);
+            }
 
-        // Log the action
-        this.logRaidAction('create', newRaid);
+            this.raids.push(newRaid);
+            await this.saveRaids();
+            this.render();
+            
+            if (window.notifications) {
+                window.notifications.show('Рейд создан', 'success');
+            }
 
-        // Отправляем обновление через WebSocket
-        if (window.wsClient && window.wsClient.isConnected) {
-            window.wsClient.sendRaidUpdate(newRaid.id, 'create', newRaid);
-            console.log('WebSocket: Отправлено обновление рейда');
+            // Log the action
+            this.logRaidAction('create', newRaid);
+
+            // Отправляем обновление через WebSocket
+            if (window.wsClient && window.wsClient.isConnected) {
+                window.wsClient.sendRaidUpdate(newRaid.id, 'create', newRaid);
+                console.log('WebSocket: Отправлено обновление рейда');
+            }
+        } catch (error) {
+            console.error('Error creating raid:', error);
+            if (window.notifications) {
+                window.notifications.show('Ошибка создания рейда', 'error');
+            }
         }
     }
 
@@ -603,9 +634,24 @@ class RaidsManager {
         this.saveRaidLogs();
     }
 
-    saveRaids() {
+    async saveRaids() {
         try {
-            localStorage.setItem('raids', JSON.stringify(this.raids));
+            if (window.databaseManager) {
+                // Сохраняем в базу данных
+                for (const raid of this.raids) {
+                    if (raid.id && raid.id > 1000) { // ID > 1000 означает существующий рейд
+                        await window.databaseManager.updateRaid(raid.id, raid);
+                    } else {
+                        const newId = await window.databaseManager.createRaid(raid);
+                        raid.id = newId;
+                    }
+                }
+                console.log('Raids: Сохранено в БД');
+            } else {
+                // Fallback к localStorage
+                localStorage.setItem('raids', JSON.stringify(this.raids));
+                console.log('Raids: Fallback к localStorage');
+            }
         } catch (error) {
             console.error('Error saving raids:', error);
         }

@@ -1,0 +1,289 @@
+/* Стили для модуля миграции данных */
+
+.migration-status {
+    background: var(--card-bg);
+    border-radius: 12px;
+    padding: 20px;
+    border: 2px solid var(--border-color);
+}
+
+.migration-status h4 {
+    margin: 0 0 16px 0;
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 600;
+    text-align: center;
+}
+
+/* Прогресс бар */
+.migration-progress {
+    margin-bottom: 20px;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--border-color);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--primary-color);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.progress-text {
+    display: block;
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* Элементы миграции */
+.migration-items {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.migration-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background: var(--input-bg);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+}
+
+.migration-item.completed {
+    background: var(--success-bg);
+    border-color: var(--success-color);
+}
+
+.migration-item i {
+    margin-right: 12px;
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+}
+
+.migration-item.completed i {
+    color: var(--success-color);
+}
+
+.migration-item:not(.completed) i {
+    color: var(--warning-color);
+}
+
+.migration-item span {
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Кнопка запуска миграции */
+.start-migration-btn {
+    width: 100%;
+    padding: 14px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    justify-content: center;
+}
+
+.start-migration-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.3);
+}
+
+/* Завершенная миграция */
+.migration-complete {
+    text-align: center;
+    padding: 30px 20px;
+    background: var(--success-bg);
+    border-radius: 12px;
+    border: 2px solid var(--success-color);
+}
+
+.migration-complete i {
+    font-size: 48px;
+    color: var(--success-color);
+    margin-bottom: 16px;
+}
+
+.migration-complete h4 {
+    margin: 0 0 8px 0;
+    color: var(--text-primary);
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.migration-complete p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+/* Анимации */
+.migration-item {
+    animation: slideInLeft 0.3s ease-out;
+}
+
+.migration-item:nth-child(1) { animation-delay: 0.1s; }
+.migration-item:nth-child(2) { animation-delay: 0.2s; }
+.migration-item:nth-child(3) { animation-delay: 0.3s; }
+.migration-item:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.progress-fill {
+    animation: progressFill 0.8s ease-out;
+}
+
+@keyframes progressFill {
+    from {
+        width: 0;
+    }
+}
+
+/* Темы */
+[data-theme="dark"] .migration-status {
+    background: var(--card-bg-dark);
+    border-color: var(--border-color-dark);
+}
+
+[data-theme="dark"] .migration-item {
+    background: var(--input-bg-dark);
+    border-color: var(--border-color-dark);
+}
+
+[data-theme="cyberpunk"] .migration-status {
+    background: var(--card-bg-cyberpunk);
+    border-color: var(--accent-color-cyberpunk);
+    box-shadow: 0 0 20px rgba(var(--accent-rgb-cyberpunk), 0.2);
+}
+
+[data-theme="cyberpunk"] .progress-fill {
+    background: var(--accent-color-cyberpunk);
+    box-shadow: 0 0 10px var(--accent-color-cyberpunk);
+}
+
+[data-theme="cyberpunk"] .migration-item.completed {
+    background: rgba(var(--accent-rgb-cyberpunk), 0.1);
+    border-color: var(--accent-color-cyberpunk);
+}
+
+[data-theme="nature"] .migration-status {
+    background: var(--card-bg-nature);
+    border-color: var(--accent-color-nature);
+}
+
+[data-theme="nature"] .migration-item.completed {
+    background: var(--success-bg-nature);
+    border-color: var(--success-color-nature);
+}
+
+[data-theme="professional"] .migration-status {
+    background: var(--card-bg-professional);
+    border-color: var(--border-color-professional);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .migration-status {
+        margin: 0 20px;
+    }
+    
+    .migration-items {
+        gap: 8px;
+    }
+    
+    .migration-item {
+        padding: 10px;
+    }
+    
+    .migration-item span {
+        font-size: 13px;
+    }
+}
+
+/* Состояния загрузки */
+.start-migration-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.start-migration-btn .fa-spinner {
+    margin-right: 8px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* Уведомления о процессе */
+.migration-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--info-bg);
+    border: 1px solid var(--info-color);
+    border-radius: 8px;
+    padding: 16px;
+    color: var(--text-primary);
+    font-size: 14px;
+    z-index: 1000;
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Ошибки миграции */
+.migration-error {
+    background: var(--error-bg);
+    border-color: var(--error-color);
+    color: var(--error-color);
+}
+
+.migration-error i {
+    color: var(--error-color);
+}
+
+/* Успешная миграция */
+.migration-success {
+    background: var(--success-bg);
+    border-color: var(--success-color);
+    color: var(--success-color);
+}
+
+.migration-success i {
+    color: var(--success-color);
+}

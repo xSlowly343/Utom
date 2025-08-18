@@ -38,10 +38,31 @@ class CharactersManager {
         });
     }
 
-    loadCharacters() {
+    async loadCharacters() {
         try {
-            const saved = localStorage.getItem('characters');
-            this.characters = saved ? JSON.parse(saved) : this.getDefaultCharacters();
+            if (window.databaseManager) {
+                // Используем базу данных
+                const userId = window.authManager?.getCurrentUser()?.id || 1;
+                this.characters = await window.databaseManager.getCharactersByUserId(userId);
+                console.log('Characters: Загружено из БД:', this.characters.length);
+                
+                // Если персонажей нет, создаем демо
+                if (this.characters.length === 0) {
+                    this.characters = this.getDefaultCharacters();
+                    // Сохраняем демо персонажей в БД
+                    for (const character of this.characters) {
+                        await window.databaseManager.createCharacter({
+                            ...character,
+                            userId: userId
+                        });
+                    }
+                }
+            } else {
+                // Fallback к localStorage
+                const saved = localStorage.getItem('characters');
+                this.characters = saved ? JSON.parse(saved) : this.getDefaultCharacters();
+                console.log('Characters: Fallback к localStorage');
+            }
         } catch (error) {
             console.error('Error loading characters:', error);
             this.characters = this.getDefaultCharacters();
@@ -64,52 +85,116 @@ class CharactersManager {
         ];
     }
 
-    saveCharacters() {
+    async saveCharacters() {
         try {
-            localStorage.setItem('characters', JSON.stringify(this.characters));
+            if (window.databaseManager) {
+                // Сохраняем в базу данных
+                const userId = window.authManager?.getCurrentUser()?.id || 1;
+                for (const character of this.characters) {
+                    if (character.id && character.id > 1000) { // ID > 1000 означает существующий персонаж
+                        await window.databaseManager.updateCharacter(character.id, character);
+                    } else {
+                        const newId = await window.databaseManager.createCharacter({
+                            ...character,
+                            userId: userId
+                        });
+                        character.id = newId;
+                    }
+                }
+                console.log('Characters: Сохранено в БД');
+            } else {
+                // Fallback к localStorage
+                localStorage.setItem('characters', JSON.stringify(this.characters));
+                console.log('Characters: Fallback к localStorage');
+            }
         } catch (error) {
             console.error('Error saving characters:', error);
         }
     }
 
-    addCharacter(characterData) {
-        const newCharacter = {
-            id: Date.now(),
-            ...characterData,
-            createdAt: new Date().toISOString()
-        };
+    async addCharacter(characterData) {
+        try {
+            const newCharacter = {
+                id: Date.now(),
+                ...characterData,
+                createdAt: new Date().toISOString()
+            };
 
-        this.characters.push(newCharacter);
-        this.saveCharacters();
-        this.render();
-        
-        // Show notification
-        if (window.notifications) {
-            window.notifications.show('Персонаж добавлен', 'success');
-        }
-    }
+            if (window.databaseManager) {
+                // Сохраняем в БД
+                const userId = window.authManager?.getCurrentUser()?.id || 1;
+                const dbId = await window.databaseManager.createCharacter({
+                    ...newCharacter,
+                    userId: userId
+                });
+                newCharacter.id = dbId;
+                console.log('Characters: Персонаж сохранен в БД с ID:', dbId);
+            }
 
-    updateCharacter(id, updates) {
-        const index = this.characters.findIndex(c => c.id === parseInt(id));
-        if (index !== -1) {
-            this.characters[index] = { ...this.characters[index], ...updates };
-            this.saveCharacters();
+            this.characters.push(newCharacter);
+            await this.saveCharacters();
             this.render();
             
+            // Show notification
             if (window.notifications) {
-                window.notifications.show('Персонаж обновлен', 'success');
+                window.notifications.show('Персонаж добавлен', 'success');
+            }
+        } catch (error) {
+            console.error('Error adding character:', error);
+            if (window.notifications) {
+                window.notifications.show('Ошибка добавления персонажа', 'error');
             }
         }
     }
 
-    deleteCharacter(id) {
-        if (confirm('Вы уверены, что хотите удалить этого персонажа?')) {
-            this.characters = this.characters.filter(c => c.id !== parseInt(id));
-            this.saveCharacters();
-            this.render();
-            
+    async updateCharacter(id, updates) {
+        try {
+            const index = this.characters.findIndex(c => c.id === parseInt(id));
+            if (index !== -1) {
+                this.characters[index] = { ...this.characters[index], ...updates };
+                
+                if (window.databaseManager) {
+                    // Обновляем в БД
+                    await window.databaseManager.updateCharacter(parseInt(id), this.characters[index]);
+                    console.log('Characters: Персонаж обновлен в БД');
+                }
+                
+                await this.saveCharacters();
+                this.render();
+                
+                if (window.notifications) {
+                    window.notifications.show('Персонаж обновлен', 'success');
+                }
+            }
+        } catch (error) {
+            console.error('Error updating character:', error);
             if (window.notifications) {
-                window.notifications.show('Персонаж удален', 'info');
+                window.notifications.show('Ошибка обновления персонажа', 'error');
+            }
+        }
+    }
+
+    async deleteCharacter(id) {
+        if (confirm('Вы уверены, что хотите удалить этого персонажа?')) {
+            try {
+                if (window.databaseManager) {
+                    // Удаляем из БД
+                    await window.databaseManager.deleteCharacter(parseInt(id));
+                    console.log('Characters: Персонаж удален из БД');
+                }
+                
+                this.characters = this.characters.filter(c => c.id !== parseInt(id));
+                await this.saveCharacters();
+                this.render();
+                
+                if (window.notifications) {
+                    window.notifications.show('Персонаж удален', 'info');
+                }
+            } catch (error) {
+                console.error('Error deleting character:', error);
+                if (window.notifications) {
+                    window.notifications.show('Ошибка удаления персонажа', 'error');
+                }
             }
         }
     }
@@ -225,10 +310,26 @@ class CharactersManager {
     }
 }
 
-// Initialize when DOM is loaded
-document.addEventListener('DOMContentLoaded', () => {
-    window.charactersManager = new CharactersManager();
-});
+    // Методы для интеграции с аутентификацией
+    onUserAuthenticated(user) {
+        console.log('Characters: Пользователь аутентифицирован:', user.username);
+        // Перезагружаем персонажей для нового пользователя
+        this.loadCharacters().then(() => {
+            this.render();
+        });
+    }
+
+    onUserLogout() {
+        console.log('Characters: Пользователь вышел');
+        this.characters = [];
+        this.currentCharacter = null;
+        this.render();
+    }
+
+    // Initialize when DOM is loaded
+    document.addEventListener('DOMContentLoaded', () => {
+        window.charactersManager = new CharactersManager();
+    });
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {
