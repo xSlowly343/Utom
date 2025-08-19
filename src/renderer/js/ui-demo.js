@@ -113,6 +113,19 @@ class UIDemo {
                         <button class="btn btn-outline btn-sm" onclick="window.uiDemo.testPageTransitions()">📱 Переходы страниц</button>
                     </div>
                 </div>
+                
+                <div class="demo-section">
+                    <h4>🧪 Тестирование</h4>
+                    <div class="demo-buttons">
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.showTestRunner()">🧪 Test Runner</button>
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.runAllTests()">🚀 Все тесты</button>
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.runUnitTests()">⚡ Unit тесты</button>
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.runIntegrationTests()">🔗 Integration тесты</button>
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.runPerformanceTests()">⚡ Performance тесты</button>
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.runAccessibilityTests()">♿ Accessibility тесты</button>
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.runUITests()">🎨 UI тесты</button>
+                    </div>
+                </div>
             </div>
             
             <div class="demo-status">
@@ -944,6 +957,96 @@ class UIDemo {
                 }
             }, index * 200);
         });
+    }
+
+    // Тестирование
+    showTestRunner() {
+        if (window.testRunner) {
+            window.testRunner.showReport();
+            window.toastManager?.info(
+                'Test Runner',
+                'Открыт интерфейс тестирования',
+                3000
+            );
+        } else {
+            window.toastManager?.error(
+                'Ошибка',
+                'TestRunner не доступен',
+                5000
+            );
+        }
+    }
+
+    runAllTests() {
+        if (window.testRunner) {
+            window.testRunner.runAllTests();
+            window.toastManager?.info(
+                'Тестирование',
+                'Запущены все тесты',
+                3000
+            );
+        } else {
+            window.toastManager?.error(
+                'Ошибка',
+                'TestRunner не доступен',
+                5000
+            );
+        }
+    }
+
+    runUnitTests() {
+        if (window.testRunner) {
+            window.testRunner.runUnitTests();
+            window.toastManager?.info(
+                'Unit тесты',
+                'Запущены Unit тесты',
+                3000
+            );
+        }
+    }
+
+    runIntegrationTests() {
+        if (window.testRunner) {
+            window.testRunner.runIntegrationTests();
+            window.toastManager?.info(
+                'Integration тесты',
+                'Запущены Integration тесты',
+                3000
+            );
+        }
+    }
+
+    runPerformanceTests() {
+        if (window.testRunner) {
+            window.testRunner.runPerformanceTests();
+            window.toastManager?.info(
+                'Performance тесты',
+                'Запущены Performance тесты',
+                3000
+            );
+        }
+    }
+
+    runAccessibilityTests() {
+        if (window.testRunner) {
+            window.testRunner.runAccessibilityTests();
+            window.toastManager?.info(
+                'Accessibility тесты',
+                'Запущены Accessibility тесты',
+                3000
+            );
+        }
+    }
+
+    runUITests() {
+        if (window.testRunner) {
+            window.testRunner.runUITests();
+            window.toastManager?.info(
+                'UI тесты',
+                'Запущены UI тесты',
+                3000
+            );
+        }
     }
 
     // Остановка модуля
