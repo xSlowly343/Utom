@@ -83,6 +83,16 @@ class UIDemo {
                         <button class="btn btn-outline btn-sm" onclick="window.uiDemo.clearAnimations()">🚫 Очистить</button>
                     </div>
                 </div>
+                
+                <div class="demo-section">
+                    <h4>📱 Адаптивность</h4>
+                    <div class="demo-buttons">
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.testResponsive()">🔄 Тест адаптивности</button>
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.toggleMobileMenu()">☰ Мобильное меню</button>
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.testTouchGestures()">👆 Touch жесты</button>
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.showDeviceInfo()">📊 Информация об устройстве</button>
+                    </div>
+                </div>
             </div>
             
             <div class="demo-status">
@@ -485,6 +495,125 @@ class UIDemo {
         const counterElement = document.getElementById('demoCounter');
         if (counterElement) {
             counterElement.textContent = count;
+        }
+    }
+
+    // Тестирование адаптивности
+    testResponsive() {
+        if (window.responsiveManager) {
+            const breakpoint = window.responsiveManager.getCurrentBreakpoint();
+            const deviceType = window.responsiveManager.getDeviceType();
+            const orientation = window.responsiveManager.getOrientation();
+            
+            window.toastManager?.info(
+                'Информация об адаптивности',
+                `Breakpoint: ${breakpoint}<br>Устройство: ${deviceType}<br>Ориентация: ${orientation}`,
+                5000
+            );
+            
+            // Показываем текущие CSS классы
+            const bodyClasses = document.body.className;
+            const htmlClasses = document.documentElement.className;
+            
+            console.log('Responsive Classes:', {
+                body: bodyClasses,
+                html: htmlClasses,
+                breakpoint,
+                deviceType,
+                orientation
+            });
+        }
+    }
+
+    toggleMobileMenu() {
+        if (window.responsiveManager) {
+            window.responsiveManager.toggleMobileMenu();
+        }
+    }
+
+    testTouchGestures() {
+        if (window.touchGestureManager) {
+            const gestures = window.touchGestureManager.getAllGestures();
+            const activeGestures = window.touchGestureManager.getActiveGestures();
+            
+            window.toastManager?.info(
+                'Touch жесты',
+                `Доступно жестов: ${gestures.length}<br>Активных: ${activeGestures.length}`,
+                5000
+            );
+            
+            // Показываем инструкции по жестам
+            this.showTouchInstructions();
+        }
+    }
+
+    showTouchInstructions() {
+        const instructions = document.createElement('div');
+        instructions.className = 'touch-instructions';
+        instructions.innerHTML = `
+            <div class="instructions-content">
+                <h4>👆 Touch жесты</h4>
+                <ul>
+                    <li>Свайп влево/вправо - навигация</li>
+                    <li>Свайп вверх/вниз - скролл</li>
+                    <li>Pinch - масштабирование</li>
+                    <li>Долгое нажатие - контекстное меню</li>
+                    <li>Двойное нажатие - увеличение</li>
+                </ul>
+                <button class="btn btn-primary" onclick="this.parentElement.parentElement.remove()">Понятно</button>
+            </div>
+        `;
+        
+        instructions.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-lg);
+            z-index: 10001;
+            box-shadow: var(--shadow-xl);
+            max-width: 400px;
+            width: 90%;
+        `;
+        
+        document.body.appendChild(instructions);
+        
+        // Автоматически убираем через 10 секунд
+        setTimeout(() => {
+            if (instructions.parentElement) {
+                instructions.remove();
+            }
+        }, 10000);
+    }
+
+    showDeviceInfo() {
+        if (window.responsiveManager) {
+            const info = {
+                breakpoint: window.responsiveManager.getCurrentBreakpoint(),
+                deviceType: window.responsiveManager.getDeviceType(),
+                orientation: window.responsiveManager.getOrientation(),
+                isMobile: window.responsiveManager.isMobileDevice(),
+                isTablet: window.responsiveManager.isTabletDevice(),
+                isDesktop: window.responsiveManager.isDesktopDevice(),
+                screenWidth: window.innerWidth,
+                screenHeight: window.innerHeight,
+                userAgent: navigator.userAgent
+            };
+            
+            const infoText = Object.entries(info)
+                .map(([key, value]) => `${key}: ${value}`)
+                .join('<br>');
+            
+            window.toastManager?.info(
+                'Информация об устройстве',
+                infoText,
+                8000
+            );
+            
+            console.log('Device Info:', info);
         }
     }
 
