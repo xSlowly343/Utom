@@ -1,577 +1,538 @@
 /**
- * Notifications Module - Handles desktop and in-app notifications
+ * Notifications Module - Система уведомлений
  */
+
 class NotificationsModule {
     constructor() {
         this.notifications = [];
         this.settings = {
-            desktop: true,
+            enabled: true,
             sound: true,
+            desktop: true,
             duration: 5000,
             position: 'top-right',
-            maxVisible: 5
+            maxNotifications: 5
         };
-        this.sound = null;
+        
         this.init();
     }
 
     init() {
         this.loadSettings();
-        this.initSound();
         this.createNotificationContainer();
-        this.initEventListeners();
-        this.checkPermission();
+        this.setupEventListeners();
+        console.log('NotificationsModule: Инициализирован');
     }
 
     loadSettings() {
-        const stored = localStorage.getItem('notificationSettings');
-        if (stored) {
-            this.settings = { ...this.settings, ...JSON.parse(stored) };
+        try {
+            const savedSettings = localStorage.getItem('notificationSettings');
+            if (savedSettings) {
+                this.settings = { ...this.settings, ...JSON.parse(savedSettings) };
+            }
+        } catch (error) {
+            console.error('NotificationsModule: Ошибка загрузки настроек:', error);
         }
     }
 
     saveSettings() {
-        localStorage.setItem('notificationSettings', JSON.stringify(this.settings));
-    }
-
-    initSound() {
-        if (this.settings.sound) {
-            this.sound = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBSuBzvLZiTYIG2m98OScTgwOUarm7blmGgU7k9n1unEiBC13yO/eizEIHWq+8+OWT');
+        try {
+            localStorage.setItem('notificationSettings', JSON.stringify(this.settings));
+        } catch (error) {
+            console.error('NotificationsModule: Ошибка сохранения настроек:', error);
         }
     }
 
     createNotificationContainer() {
-        if (document.getElementById('notificationContainer')) return;
+        // Удаляем существующий контейнер если есть
+        const existingContainer = document.getElementById('notifications-container');
+        if (existingContainer) {
+            existingContainer.remove();
+        }
 
+        // Создаем новый контейнер
         const container = document.createElement('div');
-        container.id = 'notificationContainer';
-        container.className = `notification-container ${this.settings.position}`;
+        container.id = 'notifications-container';
+        container.className = `notifications-container ${this.settings.position}`;
+        
         document.body.appendChild(container);
+        
+        // Добавляем стили
+        this.addNotificationStyles();
     }
 
-    initEventListeners() {
-        // Listen for notification permission changes
-        if ('Notification' in window) {
-            Notification.requestPermission().then(permission => {
-                this.updatePermissionStatus(permission);
+    setupEventListeners() {
+        // События для показа уведомлений
+        window.addEventListener('showNotification', (event) => {
+            const { message, type, duration } = event.detail;
+            this.show(message, type, duration);
+        });
+
+        // События для скрытия уведомлений
+        window.addEventListener('hideNotification', (event) => {
+            const { id } = event.detail;
+            this.hide(id);
+        });
+
+        // События для очистки всех уведомлений
+        window.addEventListener('clearNotifications', () => {
+            this.clearAll();
+        });
+
+        // Запрос разрешения на desktop уведомления
+        if (this.settings.desktop && 'Notification' in window) {
+            if (Notification.permission === 'default') {
+                Notification.requestPermission();
+            }
+        }
+    }
+
+    // Показ уведомления
+    show(message, type = 'info', duration = null) {
+        if (!this.settings.enabled) return;
+
+        const notification = this.createNotification(message, type);
+        const container = document.getElementById('notifications-container');
+        
+        if (container) {
+            container.appendChild(notification);
+            
+            // Ограничиваем количество уведомлений
+            this.limitNotifications();
+            
+            // Показываем анимацию
+            setTimeout(() => {
+                notification.classList.add('show');
+            }, 100);
+            
+            // Автоматически скрываем
+            const autoHideDuration = duration || this.settings.duration;
+            if (autoHideDuration > 0) {
+                setTimeout(() => {
+                    this.hide(notification.id);
+                }, autoHideDuration);
+            }
+            
+            // Воспроизводим звук
+            if (this.settings.sound) {
+                this.playNotificationSound(type);
+            }
+            
+            // Показываем desktop уведомление
+            if (this.settings.desktop && 'Notification' in window && Notification.permission === 'granted') {
+                this.showDesktopNotification(message, type);
+            }
+            
+            // Сохраняем в истории
+            this.addToHistory(message, type);
+            
+            return notification.id;
+        }
+    }
+
+    // Создание элемента уведомления
+    createNotification(message, type) {
+        const notification = document.createElement('div');
+        const id = `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        
+        notification.id = id;
+        notification.className = `notification notification-${type}`;
+        notification.innerHTML = `
+            <div class="notification-content">
+                <div class="notification-icon">
+                    ${this.getNotificationIcon(type)}
+                </div>
+                <div class="notification-message">
+                    ${this.escapeHtml(message)}
+                </div>
+                <button class="notification-close" onclick="window.notificationsModule.hide('${id}')">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="notification-progress"></div>
+        `;
+        
+        return notification;
+    }
+
+    // Получение иконки для типа уведомления
+    getNotificationIcon(type) {
+        const icons = {
+            'success': '<i class="fas fa-check-circle"></i>',
+            'error': '<i class="fas fa-exclamation-circle"></i>',
+            'warning': '<i class="fas fa-exclamation-triangle"></i>',
+            'info': '<i class="fas fa-info-circle"></i>',
+            'loading': '<i class="fas fa-spinner fa-spin"></i>'
+        };
+        return icons[type] || icons['info'];
+    }
+
+    // Экранирование HTML
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Скрытие уведомления
+    hide(id) {
+        const notification = document.getElementById(id);
+        if (notification) {
+            notification.classList.remove('show');
+            notification.classList.add('hide');
+            
+            setTimeout(() => {
+                if (notification.parentElement) {
+                    notification.remove();
+                }
+            }, 300);
+        }
+    }
+
+    // Ограничение количества уведомлений
+    limitNotifications() {
+        const container = document.getElementById('notifications-container');
+        if (container) {
+            const notifications = container.querySelectorAll('.notification');
+            if (notifications.length > this.settings.maxNotifications) {
+                const oldestNotification = notifications[0];
+                this.hide(oldestNotification.id);
+            }
+        }
+    }
+
+    // Воспроизведение звука
+    playNotificationSound(type) {
+        try {
+            // Создаем простой звук уведомления
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            // Настраиваем звук в зависимости от типа
+            const frequencies = {
+                'success': 800,
+                'error': 400,
+                'warning': 600,
+                'info': 700,
+                'loading': 500
+            };
+            
+            oscillator.frequency.setValueAtTime(frequencies[type] || 700, audioContext.currentTime);
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        } catch (error) {
+            console.warn('NotificationsModule: Не удалось воспроизвести звук:', error);
+        }
+    }
+
+    // Desktop уведомления
+    showDesktopNotification(message, type) {
+        try {
+            const title = this.getNotificationTitle(type);
+            const icon = this.getNotificationIcon(type);
+            
+            new Notification(title, {
+                body: message,
+                icon: '/assets/icon.png',
+                tag: `notification-${type}`,
+                requireInteraction: type === 'error' || type === 'warning'
+            });
+        } catch (error) {
+            console.warn('NotificationsModule: Не удалось показать desktop уведомление:', error);
+        }
+    }
+
+    // Получение заголовка уведомления
+    getNotificationTitle(type) {
+        const titles = {
+            'success': 'Успешно',
+            'error': 'Ошибка',
+            'warning': 'Предупреждение',
+            'info': 'Информация',
+            'loading': 'Загрузка'
+        };
+        return titles[type] || 'Уведомление';
+    }
+
+    // Добавление в историю
+    addToHistory(message, type) {
+        const notificationRecord = {
+            id: Date.now(),
+            message,
+            type,
+            timestamp: new Date().toISOString()
+        };
+        
+        this.notifications.push(notificationRecord);
+        
+        // Ограничиваем историю
+        if (this.notifications.length > 100) {
+            this.notifications.shift();
+        }
+        
+        // Сохраняем в localStorage
+        try {
+            localStorage.setItem('notificationHistory', JSON.stringify(this.notifications));
+        } catch (error) {
+            console.warn('NotificationsModule: Не удалось сохранить историю:', error);
+        }
+    }
+
+    // Получение истории уведомлений
+    getHistory(limit = 50) {
+        return this.notifications.slice(-limit);
+    }
+
+    // Очистка истории
+    clearHistory() {
+        this.notifications = [];
+        try {
+            localStorage.removeItem('notificationHistory');
+        } catch (error) {
+            console.warn('NotificationsModule: Не удалось очистить историю:', error);
+        }
+    }
+
+    // Очистка всех уведомлений
+    clearAll() {
+        const container = document.getElementById('notifications-container');
+        if (container) {
+            const notifications = container.querySelectorAll('.notification');
+            notifications.forEach(notification => {
+                this.hide(notification.id);
             });
         }
-
-        // Listen for settings changes
-        document.addEventListener('notificationSettingsChanged', (e) => {
-            this.updateSettings(e.detail);
-        });
     }
 
-    checkPermission() {
-        if ('Notification' in window) {
-            const permission = Notification.permission;
-            this.updatePermissionStatus(permission);
-        }
-    }
-
-    updatePermissionStatus(permission) {
-        const statusElement = document.getElementById('notificationPermissionStatus');
-        if (statusElement) {
-            statusElement.textContent = permission;
-            statusElement.className = `permission-status ${permission}`;
-        }
-    }
-
+    // Обновление настроек
     updateSettings(newSettings) {
         this.settings = { ...this.settings, ...newSettings };
         this.saveSettings();
         
-        if (newSettings.sound !== undefined) {
-            this.initSound();
+        // Обновляем контейнер при изменении позиции
+        if (newSettings.position && newSettings.position !== this.settings.position) {
+            this.createNotificationContainer();
         }
         
-        if (newSettings.position) {
-            this.updateNotificationPosition();
-        }
-    }
-
-    updateNotificationPosition() {
-        const container = document.getElementById('notificationContainer');
-        if (container) {
-            container.className = `notification-container ${this.settings.position}`;
-        }
-    }
-
-    // Main notification methods
-    show(options) {
-        const notification = {
-            id: this.generateId(),
-            type: options.type || 'info',
-            title: options.title || 'Notification',
-            message: options.message || '',
-            duration: options.duration || this.settings.duration,
-            actions: options.actions || [],
-            timestamp: new Date(),
-            read: false
-        };
-
-        // Add to notifications array
-        this.notifications.unshift(notification);
-        this.notifications = this.notifications.slice(0, 100); // Keep only last 100
-
-        // Show desktop notification if enabled
-        if (this.settings.desktop && 'Notification' in window && Notification.permission === 'granted') {
-            this.showDesktopNotification(notification);
-        }
-
-        // Show in-app notification
-        this.showInAppNotification(notification);
-
-        // Play sound if enabled
-        if (this.settings.sound && this.sound) {
-            this.playNotificationSound();
-        }
-
-        // Auto-remove after duration
-        if (notification.duration > 0) {
-            setTimeout(() => {
-                this.removeNotification(notification.id);
-            }, notification.duration);
-        }
-
-        // Update notification count
-        this.updateNotificationCount();
-
-        return notification.id;
-    }
-
-    showDesktopNotification(notification) {
-        const desktopNotification = new Notification(notification.title, {
-            body: notification.message,
-            icon: this.getNotificationIcon(notification.type),
-            badge: this.getNotificationIcon(notification.type),
-            tag: notification.id,
-            requireInteraction: false,
-            silent: !this.settings.sound
-        });
-
-        // Handle click events
-        desktopNotification.onclick = () => {
-            window.focus();
-            this.markAsRead(notification.id);
-            desktopNotification.close();
-        };
-
-        // Handle action buttons if present
-        if (notification.actions.length > 0) {
-            notification.actions.forEach(action => {
-                desktopNotification.actions.push({
-                    action: action.id,
-                    title: action.title,
-                    icon: action.icon
-                });
-            });
-        }
-    }
-
-    showInAppNotification(notification) {
-        const container = document.getElementById('notificationContainer');
-        if (!container) return;
-
-        const notificationElement = this.createNotificationElement(notification);
-        container.appendChild(notificationElement);
-
-        // Animate in
-        setTimeout(() => {
-            notificationElement.classList.add('show');
-        }, 10);
-
-        // Limit visible notifications
-        const visibleNotifications = container.querySelectorAll('.notification.show');
-        if (visibleNotifications.length > this.settings.maxVisible) {
-            visibleNotifications[visibleNotifications.length - 1].classList.remove('show');
-        }
-    }
-
-    createNotificationElement(notification) {
-        const element = document.createElement('div');
-        element.className = `notification notification-${notification.type}`;
-        element.dataset.id = notification.id;
-
-        let actionsHtml = '';
-        if (notification.actions.length > 0) {
-            actionsHtml = `
-                <div class="notification-actions">
-                    ${notification.actions.map(action => `
-                        <button class="notification-action" data-action="${action.id}">
-                            ${action.icon ? `<i class="${action.icon}"></i>` : ''}
-                            ${action.title}
-                        </button>
-                    `).join('')}
-                </div>
-            `;
-        }
-
-        element.innerHTML = `
-            <div class="notification-header">
-                <div class="notification-title">
-                    <i class="${this.getNotificationIcon(notification.type)}"></i>
-                    ${notification.title}
-                </div>
-                <button class="notification-close" onclick="notificationsModule.removeNotification('${notification.id}')">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="notification-message">${notification.message}</div>
-            ${actionsHtml}
-            <div class="notification-timestamp">${this.formatTimestamp(notification.timestamp)}</div>
-        `;
-
-        // Add action event listeners
-        if (notification.actions.length > 0) {
-            element.querySelectorAll('.notification-action').forEach(button => {
-                button.addEventListener('click', (e) => {
-                    const actionId = e.currentTarget.dataset.action;
-                    this.handleNotificationAction(notification.id, actionId);
-                });
-            });
-        }
-
-        return element;
-    }
-
-    removeNotification(id) {
-        // Remove from array
-        this.notifications = this.notifications.filter(n => n.id !== id);
-
-        // Remove from DOM
-        const element = document.querySelector(`[data-id="${id}"]`);
-        if (element) {
-            element.classList.remove('show');
-            setTimeout(() => {
-                if (element.parentNode) {
-                    element.parentNode.removeChild(element);
-                }
-            }, 300);
-        }
-
-        // Update notification count
-        this.updateNotificationCount();
-    }
-
-    markAsRead(id) {
-        const notification = this.notifications.find(n => n.id === id);
-        if (notification) {
-            notification.read = true;
-        }
-    }
-
-    markAllAsRead() {
-        this.notifications.forEach(n => n.read = true);
-        this.updateNotificationCount();
-    }
-
-    clearAll() {
-        this.notifications = [];
-        const container = document.getElementById('notificationContainer');
-        if (container) {
-            container.innerHTML = '';
-        }
-        this.updateNotificationCount();
-    }
-
-    // Specific notification types
-    showSuccess(title, message, options = {}) {
-        return this.show({
-            type: 'success',
-            title,
-            message,
-            ...options
-        });
-    }
-
-    showError(title, message, options = {}) {
-        return this.show({
-            type: 'error',
-            title,
-            message,
-            duration: 0, // Don't auto-remove errors
-            ...options
-        });
-    }
-
-    showWarning(title, message, options = {}) {
-        return this.show({
-            type: 'warning',
-            title,
-            message,
-            ...options
-        });
-    }
-
-    showInfo(title, message, options = {}) {
-        return this.show({
-            type: 'info',
-            title,
-            message,
-            ...options
-        });
-    }
-
-    // Raid-specific notifications
-    showRaidCreated(raid) {
-        return this.show({
-            type: 'success',
-            title: 'Raid Created',
-            message: `"${raid.title}" has been scheduled for ${this.formatDate(raid.date)} at ${raid.time}`,
-            actions: [
-                {
-                    id: 'view',
-                    title: 'View Raid',
-                    icon: 'fas fa-eye'
-                },
-                {
-                    id: 'join',
-                    title: 'Join Raid',
-                    icon: 'fas fa-user-plus'
-                }
-            ]
-        });
-    }
-
-    showRaidReminder(raid) {
-        return this.show({
-            type: 'info',
-            title: 'Raid Reminder',
-            message: `"${raid.title}" starts in 30 minutes`,
-            actions: [
-                {
-                    id: 'view',
-                    title: 'View Details',
-                    icon: 'fas fa-eye'
-                },
-                {
-                    id: 'dismiss',
-                    title: 'Dismiss',
-                    icon: 'fas fa-times'
-                }
-            ]
-        });
-    }
-
-    showRaidStarting(raid) {
-        return this.show({
-            type: 'warning',
-            title: 'Raid Starting',
-            message: `"${raid.title}" is starting now!`,
-            duration: 0,
-            actions: [
-                {
-                    id: 'join',
-                    title: 'Join Now',
-                    icon: 'fas fa-play'
-                },
-                {
-                    id: 'dismiss',
-                    title: 'Dismiss',
-                    icon: 'fas fa-times'
-                }
-            ]
-        });
-    }
-
-    // Character-specific notifications
-    showCharacterAdded(character) {
-        return this.show({
-            type: 'success',
-            title: 'Character Added',
-            message: `${character.name} (${character.class}) has been added to your roster`,
-            actions: [
-                {
-                    id: 'view',
-                    title: 'View Character',
-                    icon: 'fas fa-user'
-                },
-                {
-                    id: 'edit',
-                    title: 'Edit',
-                    icon: 'fas fa-edit'
-                }
-            ]
-        });
-    }
-
-    showLevelUp(character, oldLevel, newLevel) {
-        return this.show({
-            type: 'success',
-            title: 'Level Up!',
-            message: `${character.name} has reached level ${newLevel}!`,
-            actions: [
-                {
-                    id: 'view',
-                    title: 'View Progress',
-                    icon: 'fas fa-chart-line'
-                }
-            ]
-        });
-    }
-
-    // System notifications
-    showUpdateAvailable(version) {
-        return this.show({
-            type: 'info',
-            title: 'Update Available',
-            message: `Version ${version} is available for download`,
-            actions: [
-                {
-                    id: 'download',
-                    title: 'Download Now',
-                    icon: 'fas fa-download'
-                },
-                {
-                    id: 'later',
-                    title: 'Later',
-                    icon: 'fas fa-clock'
-                }
-            ]
-        });
-    }
-
-    showBackupComplete() {
-        return this.show({
-            type: 'success',
-            title: 'Backup Complete',
-            message: 'Your data has been successfully backed up',
-            actions: [
-                {
-                    id: 'view',
-                    title: 'View Backup',
-                    icon: 'fas fa-folder-open'
-                }
-            ]
-        });
-    }
-
-    // Action handling
-    handleNotificationAction(notificationId, actionId) {
-        const notification = this.notifications.find(n => n.id === notificationId);
-        if (!notification) return;
-
-        // Emit custom event for action handling
-        const event = new CustomEvent('notificationAction', {
-            detail: {
-                notificationId,
-                actionId,
-                notification
-            }
-        });
-        document.dispatchEvent(event);
-
-        // Remove notification after action
-        this.removeNotification(notificationId);
-    }
-
-    // Utility methods
-    generateId() {
-        return 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    }
-
-    getNotificationIcon(type) {
-        const icons = {
-            success: 'fas fa-check-circle',
-            error: 'fas fa-exclamation-circle',
-            warning: 'fas fa-exclamation-triangle',
-            info: 'fas fa-info-circle'
-        };
-        return icons[type] || icons.info;
-    }
-
-    formatTimestamp(timestamp) {
-        const now = new Date();
-        const diff = now - timestamp;
-        
-        if (diff < 60000) return 'Just now';
-        if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-        if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-        return timestamp.toLocaleDateString();
-    }
-
-    formatDate(dateString) {
-        const date = new Date(dateString);
-        return date.toLocaleDateString();
-    }
-
-    updateNotificationCount() {
-        const unreadCount = this.notifications.filter(n => !n.read).length;
-        
-        // Update badge in UI
-        const badgeElement = document.getElementById('notificationBadge');
-        if (badgeElement) {
-            if (unreadCount > 0) {
-                badgeElement.textContent = unreadCount > 99 ? '99+' : unreadCount;
-                badgeElement.style.display = 'block';
-            } else {
-                badgeElement.style.display = 'none';
-            }
-        }
-
-        // Update document title if there are unread notifications
-        if (unreadCount > 0) {
-            document.title = `(${unreadCount}) Lost Ark Raid Manager`;
-        } else {
-            document.title = 'Lost Ark Raid Manager';
-        }
-    }
-
-    playNotificationSound() {
-        if (this.sound) {
-            this.sound.currentTime = 0;
-            this.sound.play().catch(() => {
-                // Ignore audio play errors
-            });
-        }
-    }
-
-    // Settings methods
-    toggleDesktopNotifications() {
-        this.settings.desktop = !this.settings.desktop;
-        this.saveSettings();
-        
-        if (this.settings.desktop && 'Notification' in window) {
+        // Запрашиваем разрешение на desktop уведомления
+        if (newSettings.desktop && 'Notification' in window && Notification.permission === 'default') {
             Notification.requestPermission();
         }
     }
 
-    toggleSound() {
-        this.settings.sound = !this.settings.sound;
-        this.saveSettings();
-        this.initSound();
-    }
-
-    setDuration(duration) {
-        this.settings.duration = duration;
-        this.saveSettings();
-    }
-
-    setPosition(position) {
-        this.settings.position = position;
-        this.saveSettings();
-        this.updateNotificationPosition();
-    }
-
-    // Public methods
-    getNotifications() {
-        return this.notifications;
-    }
-
-    getUnreadCount() {
-        return this.notifications.filter(n => !n.read).length;
-    }
-
+    // Получение настроек
     getSettings() {
         return { ...this.settings };
     }
 
-    refresh() {
-        this.updateNotificationCount();
+    // Добавление стилей
+    addNotificationStyles() {
+        if (!document.getElementById('notification-styles')) {
+            const style = document.createElement('style');
+            style.id = 'notification-styles';
+            style.textContent = `
+                .notifications-container {
+                    position: fixed;
+                    z-index: 10000;
+                    pointer-events: none;
+                }
+                
+                .notifications-container.top-right {
+                    top: 20px;
+                    right: 20px;
+                }
+                
+                .notifications-container.top-left {
+                    top: 20px;
+                    left: 20px;
+                }
+                
+                .notifications-container.bottom-right {
+                    bottom: 20px;
+                    right: 20px;
+                }
+                
+                .notifications-container.bottom-left {
+                    bottom: 20px;
+                    left: 20px;
+                }
+                
+                .notifications-container.center {
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                }
+                
+                .notification {
+                    background: var(--bg-primary, #ffffff);
+                    border: 1px solid var(--border-color, #ddd);
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                    margin-bottom: 10px;
+                    max-width: 400px;
+                    min-width: 300px;
+                    opacity: 0;
+                    transform: translateX(100%);
+                    transition: all 0.3s ease;
+                    pointer-events: auto;
+                }
+                
+                .notification.show {
+                    opacity: 1;
+                    transform: translateX(0);
+                }
+                
+                .notification.hide {
+                    opacity: 0;
+                    transform: translateX(100%);
+                }
+                
+                .notification-content {
+                    display: flex;
+                    align-items: flex-start;
+                    padding: 15px;
+                    gap: 12px;
+                }
+                
+                .notification-icon {
+                    font-size: 20px;
+                    flex-shrink: 0;
+                    margin-top: 2px;
+                }
+                
+                .notification-icon i {
+                    width: 20px;
+                    text-align: center;
+                }
+                
+                .notification-message {
+                    flex: 1;
+                    line-height: 1.4;
+                    word-wrap: break-word;
+                }
+                
+                .notification-close {
+                    background: none;
+                    border: none;
+                    color: var(--text-muted, #6c757d);
+                    cursor: pointer;
+                    font-size: 16px;
+                    padding: 0;
+                    width: 20px;
+                    height: 20px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 50%;
+                    transition: all 0.2s ease;
+                    flex-shrink: 0;
+                }
+                
+                .notification-close:hover {
+                    background: var(--bg-secondary, #f8f9fa);
+                    color: var(--text-primary, #212529);
+                }
+                
+                .notification-progress {
+                    height: 3px;
+                    background: var(--primary-color, #007bff);
+                    border-radius: 0 0 8px 8px;
+                    animation: notification-progress 5s linear;
+                }
+                
+                @keyframes notification-progress {
+                    from { width: 100%; }
+                    to { width: 0%; }
+                }
+                
+                .notification-success {
+                    border-left: 4px solid var(--success-color, #28a745);
+                }
+                
+                .notification-success .notification-icon {
+                    color: var(--success-color, #28a745);
+                }
+                
+                .notification-error {
+                    border-left: 4px solid var(--danger-color, #dc3545);
+                }
+                
+                .notification-error .notification-icon {
+                    color: var(--danger-color, #dc3545);
+                }
+                
+                .notification-warning {
+                    border-left: 4px solid var(--warning-color, #ffc107);
+                }
+                
+                .notification-warning .notification-icon {
+                    color: var(--warning-color, #ffc107);
+                }
+                
+                .notification-info {
+                    border-left: 4px solid var(--info-color, #17a2b8);
+                }
+                
+                .notification-info .notification-icon {
+                    color: var(--info-color, #17a2b8);
+                }
+                
+                .notification-loading {
+                    border-left: 4px solid var(--primary-color, #007bff);
+                }
+                
+                .notification-loading .notification-icon {
+                    color: var(--primary-color, #007bff);
+                }
+                
+                @media (max-width: 768px) {
+                    .notifications-container {
+                        left: 10px;
+                        right: 10px;
+                        top: 10px;
+                        bottom: auto;
+                    }
+                    
+                    .notification {
+                        max-width: none;
+                        min-width: auto;
+                    }
+                }
+            `;
+            
+            document.head.appendChild(style);
+        }
+    }
+
+    // Остановка модуля
+    stop() {
+        this.clearAll();
+        console.log('NotificationsModule: Остановлен');
+    }
+
+    // Перезапуск модуля
+    restart() {
+        this.stop();
+        this.init();
+        console.log('NotificationsModule: Перезапущен');
     }
 }
 
-// Initialize the notifications module
-const notificationsModule = new NotificationsModule();
+// Инициализация при загрузке DOM
+document.addEventListener('DOMContentLoaded', () => {
+    window.notificationsModule = new NotificationsModule();
+});
+
+// Экспорт для использования в других модулях
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = NotificationsModule;
+}
