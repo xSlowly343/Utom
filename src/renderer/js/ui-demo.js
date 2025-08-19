@@ -126,6 +126,16 @@ class UIDemo {
                         <button class="btn btn-outline btn-sm" onclick="window.uiDemo.runUITests()">🎨 UI тесты</button>
                     </div>
                 </div>
+                
+                <div class="demo-section">
+                    <h4>⚠️ Обработка ошибок</h4>
+                    <div class="demo-buttons">
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.testErrorBoundary()">🚨 Тест ErrorBoundary</button>
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.showErrorHelp()">❓ Помощь по ошибкам</button>
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.showErrorReport()">📤 Отчет об ошибках</button>
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.clearErrors()">🧹 Очистить ошибки</button>
+                    </div>
+                </div>
             </div>
             
             <div class="demo-status">
@@ -1045,6 +1055,71 @@ class UIDemo {
                 'UI тесты',
                 'Запущены UI тесты',
                 3000
+            );
+        }
+    }
+
+    // Тестирование ErrorBoundary
+    testErrorBoundary() {
+        if (window.errorBoundary) {
+            // Создаем тестовую ошибку
+            const testError = new Error('Тестовая ошибка для проверки ErrorBoundary');
+            testError.stack = 'Error: Тестовая ошибка\n    at testErrorBoundary (ui-demo.js:123)\n    at HTMLButtonElement.onclick (index.html:45)';
+            
+            // Показываем ошибку через ErrorBoundary
+            window.errorBoundary.handleError(testError, 'ui-demo.test');
+            
+            window.toastManager?.info(
+                'Тест ErrorBoundary',
+                'Тестовая ошибка создана. Проверьте отображение.',
+                5000
+            );
+        } else {
+            window.toastManager?.error(
+                'Ошибка',
+                'ErrorBoundary не доступен',
+                5000
+            );
+        }
+    }
+
+    showErrorHelp() {
+        if (window.errorBoundary) {
+            window.errorBoundary.showErrorHelp();
+        } else {
+            window.toastManager?.error(
+                'Ошибка',
+                'ErrorBoundary не доступен',
+                5000
+            );
+        }
+    }
+
+    showErrorReport() {
+        if (window.errorBoundary) {
+            window.errorBoundary.showErrorReport();
+        } else {
+            window.toastManager?.error(
+                'Ошибка',
+                'ErrorBoundary не доступен',
+                5000
+            );
+        }
+    }
+
+    clearErrors() {
+        if (window.errorBoundary) {
+            window.errorBoundary.clearErrors();
+            window.toastManager?.success(
+                'Очистка ошибок',
+                'Все ошибки очищены',
+                3000
+            );
+        } else {
+            window.toastManager?.error(
+                'Ошибка',
+                'ErrorBoundary не доступен',
+                5000
             );
         }
     }

@@ -117,16 +117,231 @@ class ErrorBoundary {
         // Убираем предыдущие уведомления об ошибках
         this.removeErrorNotifications();
         
-        // Создаем уведомление об ошибке
-        const notification = this.createErrorNotification(errorInfo);
-        document.body.appendChild(notification);
+        // Создаем стабильное отображение ошибки
+        this.createStableErrorDisplay(errorInfo);
         
-        // Автоматически убираем через 10 секунд
-        setTimeout(() => {
-            if (notification.parentElement) {
-                notification.remove();
-            }
-        }, 10000);
+        // Также показываем toast уведомление
+        if (window.toastManager) {
+            window.toastManager.error(
+                'Произошла ошибка',
+                this.getUserFriendlyMessage(errorInfo),
+                0 // Без автоматического скрытия
+            );
+        }
+    }
+
+    createStableErrorDisplay(errorInfo) {
+        // Удаляем предыдущее отображение ошибки если есть
+        const existingError = document.getElementById('critical-error-display');
+        if (existingError) {
+            existingError.remove();
+        }
+
+        // Создаем стабильное отображение ошибки
+        const errorDisplay = document.createElement('div');
+        errorDisplay.id = 'critical-error-display';
+        errorDisplay.className = 'critical-error-display';
+        errorDisplay.innerHTML = `
+            <div class="critical-error-content">
+                <div class="critical-error-header">
+                    <h3>🚨 Критическая ошибка</h3>
+                    <button class="critical-error-close" onclick="this.parentElement.parentElement.parentElement.remove()">×</button>
+                </div>
+                <div class="critical-error-body">
+                    <p><strong>Сообщение:</strong> ${this.getUserFriendlyMessage(errorInfo)}</p>
+                    <p><strong>Контекст:</strong> ${errorInfo.context || 'Неизвестно'}</p>
+                    <p><strong>Время:</strong> ${new Date(errorInfo.timestamp).toLocaleString()}</p>
+                    <details class="error-details">
+                        <summary>Детали ошибки</summary>
+                        <pre class="error-stack">${errorInfo.stack || 'Стек вызовов недоступен'}</pre>
+                    </details>
+                    <div class="error-actions">
+                        <button class="btn btn-primary" onclick="window.errorBoundary.retryOperation()">🔄 Повторить</button>
+                        <button class="btn btn-outline" onclick="window.errorBoundary.showErrorHelp()">❓ Помощь</button>
+                        <button class="btn btn-outline" onclick="window.errorBoundary.reportError('${errorInfo.message}')">📤 Отправить отчет</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Добавляем стили
+        this.addErrorDisplayStyles();
+        
+        // Вставляем в начало body
+        document.body.insertBefore(errorDisplay, document.body.firstChild);
+        
+        // Сохраняем ошибку для последующего анализа
+        this.lastError = errorInfo;
+    }
+
+    addErrorDisplayStyles() {
+        if (!document.getElementById('error-boundary-styles')) {
+            const style = document.createElement('style');
+            style.id = 'error-boundary-styles';
+            style.textContent = `
+                .critical-error-display {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(0, 0, 0, 0.8);
+                    z-index: 10000;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 20px;
+                }
+                
+                .critical-error-content {
+                    background: var(--bg-primary, #ffffff);
+                    border: 2px solid var(--danger-color, #dc3545);
+                    border-radius: 12px;
+                    max-width: 600px;
+                    width: 100%;
+                    max-height: 80vh;
+                    overflow-y: auto;
+                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+                }
+                
+                .critical-error-header {
+                    background: var(--danger-color, #dc3545);
+                    color: white;
+                    padding: 20px;
+                    border-radius: 10px 10px 0 0;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                
+                .critical-error-header h3 {
+                    margin: 0;
+                    font-size: 20px;
+                }
+                
+                .critical-error-close {
+                    background: none;
+                    border: none;
+                    color: white;
+                    font-size: 24px;
+                    cursor: pointer;
+                    padding: 0;
+                    width: 30px;
+                    height: 30px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 50%;
+                    transition: background-color 0.2s;
+                }
+                
+                .critical-error-close:hover {
+                    background: rgba(255, 255, 255, 0.2);
+                }
+                
+                .critical-error-body {
+                    padding: 20px;
+                }
+                
+                .critical-error-body p {
+                    margin: 0 0 15px 0;
+                    line-height: 1.5;
+                }
+                
+                .error-details {
+                    margin: 20px 0;
+                    border: 1px solid var(--border-color, #ddd);
+                    border-radius: 8px;
+                    overflow: hidden;
+                }
+                
+                .error-details summary {
+                    background: var(--bg-secondary, #f8f9fa);
+                    padding: 15px;
+                    cursor: pointer;
+                    font-weight: 600;
+                    border-bottom: 1px solid var(--border-color, #ddd);
+                }
+                
+                .error-details summary:hover {
+                    background: var(--bg-tertiary, #e9ecef);
+                }
+                
+                .error-stack {
+                    background: var(--bg-secondary, #f8f9fa);
+                    padding: 15px;
+                    margin: 0;
+                    font-family: 'Courier New', monospace;
+                    font-size: 12px;
+                    line-height: 1.4;
+                    overflow-x: auto;
+                    white-space: pre-wrap;
+                    color: var(--text-secondary, #6c757d);
+                }
+                
+                .error-actions {
+                    display: flex;
+                    gap: 10px;
+                    margin-top: 20px;
+                    flex-wrap: wrap;
+                }
+                
+                .error-actions .btn {
+                    flex: 1;
+                    min-width: 120px;
+                }
+                
+                .fallback-page.critical {
+                    text-align: center;
+                    padding: 60px 20px;
+                    background: var(--bg-primary, #ffffff);
+                    border-radius: 12px;
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+                }
+                
+                .fallback-page.critical h1 {
+                    color: var(--danger-color, #dc3545);
+                    margin-bottom: 20px;
+                }
+                
+                .fallback-actions {
+                    display: flex;
+                    gap: 15px;
+                    justify-content: center;
+                    margin-top: 30px;
+                    flex-wrap: wrap;
+                }
+                
+                @media (max-width: 768px) {
+                    .critical-error-content {
+                        margin: 10px;
+                        max-height: 90vh;
+                    }
+                    
+                    .critical-error-header {
+                        padding: 15px;
+                    }
+                    
+                    .critical-error-header h3 {
+                        font-size: 18px;
+                    }
+                    
+                    .critical-error-body {
+                        padding: 15px;
+                    }
+                    
+                    .error-actions {
+                        flex-direction: column;
+                    }
+                    
+                    .error-actions .btn {
+                        width: 100%;
+                    }
+                }
+            `;
+            
+            document.head.appendChild(style);
+        }
     }
 
     createErrorNotification(errorInfo) {
@@ -382,6 +597,76 @@ class ErrorBoundary {
         // Здесь можно отправить отчет на сервер
         console.log('ErrorBoundary: Отчет об ошибках:', report);
         alert('Отчет об ошибках отправлен разработчикам. Спасибо за обратную связь!');
+    }
+
+    showCriticalError() {
+        // Показываем критическую ошибку
+        const criticalError = {
+            message: 'Критическая ошибка приложения',
+            context: 'critical.system.failure',
+            timestamp: new Date().toISOString(),
+            stack: 'Критическая ошибка в системе'
+        };
+        
+        this.createStableErrorDisplay(criticalError);
+        
+        // Показываем fallback страницу
+        this.showFallbackPage();
+    }
+
+    showFallbackPage() {
+        const mainContent = document.querySelector('main, .main-content, #mainContent');
+        if (mainContent) {
+            mainContent.innerHTML = `
+                <div class="fallback-page critical">
+                    <h1>🚨 Критическая ошибка</h1>
+                    <p>Приложение столкнулось с критической ошибкой и не может продолжить работу.</p>
+                    <div class="fallback-actions">
+                        <button class="btn btn-primary" onclick="location.reload()">🔄 Перезапустить</button>
+                        <button class="btn btn-outline" onclick="window.errorBoundary.showErrorHelp()">❓ Помощь</button>
+                        <button class="btn btn-outline" onclick="window.errorBoundary.showErrorReport()">📤 Отчет</button>
+                    </div>
+                </div>
+            `;
+        }
+    }
+
+    showErrorHelp() {
+        const helpContent = `
+            <h3>Что делать при ошибке:</h3>
+            <ol>
+                <li>Попробуйте обновить страницу (F5)</li>
+                <li>Перезапустите приложение</li>
+                <li>Проверьте подключение к интернету</li>
+                <li>Очистите кэш браузера</li>
+                <li>Обратитесь к разработчикам</li>
+            </ol>
+            <p><strong>Последняя ошибка:</strong> ${this.lastError ? this.lastError.message : 'Неизвестно'}</p>
+        `;
+        
+        if (window.toastManager) {
+            window.toastManager.info('Помощь по ошибке', helpContent, 0);
+        } else {
+            alert(helpContent);
+        }
+    }
+
+    reportError(errorMessage) {
+        const report = {
+            error: errorMessage,
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent,
+            url: window.location.href,
+            errors: this.errors.slice(-5) // Последние 5 ошибок
+        };
+        
+        console.log('Отчет об ошибке:', report);
+        
+        if (window.toastManager) {
+            window.toastManager.success('Отчет отправлен', 'Спасибо за обратную связь!', 5000);
+        } else {
+            alert('Отчет об ошибке отправлен. Спасибо за обратную связь!');
+        }
     }
 
     sendErrorToAnalytics(errorInfo) {
