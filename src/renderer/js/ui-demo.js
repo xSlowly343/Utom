@@ -103,6 +103,16 @@ class UIDemo {
                         <button class="btn btn-outline btn-sm" onclick="window.uiDemo.showKeyboardShortcuts()">⌨️ Горячие клавиши</button>
                     </div>
                 </div>
+                
+                <div class="demo-section">
+                    <h4>🎭 Анимации</h4>
+                    <div class="demo-buttons">
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.testAnimations()">🎬 Тест анимаций</button>
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.toggleAnimations()">🔄 Переключить анимации</button>
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.showAnimationGallery()">🎨 Галерея анимаций</button>
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.testPageTransitions()">📱 Переходы страниц</button>
+                    </div>
+                </div>
             </div>
             
             <div class="demo-status">
@@ -812,6 +822,128 @@ class UIDemo {
             recommendationsText,
             10000
         );
+    }
+
+    // Тестирование анимаций
+    testAnimations() {
+        if (window.animationManager) {
+            const animations = window.animationManager.getAllAnimations();
+            
+            window.toastManager?.info(
+                'Информация об анимациях',
+                `Доступно анимаций: ${animations.length}<br>Активных: ${window.animationManager.getActiveAnimations().length}`,
+                5000
+            );
+            
+            // Запускаем демо анимаций
+            this.runAnimationDemo();
+        }
+    }
+
+    toggleAnimations() {
+        if (window.animationManager) {
+            const currentSetting = window.animationManager.settings.enableAnimations;
+            window.animationManager.updateSettings({ enableAnimations: !currentSetting });
+            
+            const status = !currentSetting ? 'включены' : 'отключены';
+            window.toastManager?.info(
+                'Анимации',
+                `Анимации ${status}`,
+                3000
+            );
+        }
+    }
+
+    showAnimationGallery() {
+        const gallery = document.createElement('div');
+        gallery.className = 'animation-gallery';
+        gallery.innerHTML = `
+            <div class="gallery-content">
+                <h3>🎨 Галерея анимаций</h3>
+                <div class="animation-grid">
+                    <div class="animation-item" data-animation="fadeIn">Fade In</div>
+                    <div class="animation-item" data-animation="slideInUp">Slide Up</div>
+                    <div class="animation-item" data-animation="scaleIn">Scale In</div>
+                    <div class="animation-item" data-animation="bounceIn">Bounce In</div>
+                    <div class="animation-item" data-animation="rotateIn">Rotate In</div>
+                    <div class="animation-item" data-animation="flipInX">Flip X</div>
+                    <div class="animation-item" data-animation="zoomIn">Zoom In</div>
+                    <div class="animation-item" data-animation="lightSpeedIn">Light Speed</div>
+                </div>
+                <button class="btn btn-primary" onclick="this.parentElement.parentElement.remove()">Закрыть</button>
+            </div>
+        `;
+        
+        gallery.style.cssText = `
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--radius-lg);
+            padding: var(--spacing-xl);
+            z-index: 10001;
+            box-shadow: var(--shadow-xl);
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        `;
+        
+        document.body.appendChild(gallery);
+        
+        // Добавляем обработчики для анимаций
+        const animationItems = gallery.querySelectorAll('.animation-item');
+        animationItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const animationName = item.dataset.animation;
+                if (window.animationManager) {
+                    window.animationManager.playAnimation(animationName, item);
+                }
+            });
+        });
+        
+        // Автоматически убираем через 15 секунд
+        setTimeout(() => {
+            if (gallery.parentElement) {
+                gallery.remove();
+            }
+        }, 15000);
+    }
+
+    testPageTransitions() {
+        if (window.animationManager) {
+            // Показываем анимацию перехода
+            const mainContent = document.querySelector('main, .main-content, #mainContent');
+            if (mainContent) {
+                window.animationManager.playAnimation('pageTransitionOut', mainContent);
+                
+                setTimeout(() => {
+                    window.animationManager.playAnimation('pageTransitionIn', mainContent);
+                }, 300);
+            }
+            
+            window.toastManager?.info(
+                'Переходы страниц',
+                'Анимация перехода страницы выполнена',
+                3000
+            );
+        }
+    }
+
+    runAnimationDemo() {
+        const demoElements = document.querySelectorAll('.card, .btn, .form-group');
+        
+        demoElements.forEach((element, index) => {
+            setTimeout(() => {
+                if (window.animationManager) {
+                    const animations = ['fadeIn', 'slideInUp', 'scaleIn', 'bounceIn'];
+                    const randomAnimation = animations[Math.floor(Math.random() * animations.length)];
+                    window.animationManager.playAnimation(randomAnimation, element);
+                }
+            }, index * 200);
+        });
     }
 
     // Остановка модуля
