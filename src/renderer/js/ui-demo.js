@@ -93,6 +93,16 @@ class UIDemo {
                         <button class="btn btn-outline btn-sm" onclick="window.uiDemo.showDeviceInfo()">📊 Информация об устройстве</button>
                     </div>
                 </div>
+                
+                <div class="demo-section">
+                    <h4>♿ Доступность</h4>
+                    <div class="demo-buttons">
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.testAccessibility()">♿ Тест доступности</button>
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.toggleHighContrast()">🎨 Высокий контраст</button>
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.toggleLargeText()">📝 Большой текст</button>
+                        <button class="btn btn-outline btn-sm" onclick="window.uiDemo.showKeyboardShortcuts()">⌨️ Горячие клавиши</button>
+                    </div>
+                </div>
             </div>
             
             <div class="demo-status">
@@ -615,6 +625,193 @@ class UIDemo {
             
             console.log('Device Info:', info);
         }
+    }
+
+    // Тестирование доступности
+    testAccessibility() {
+        if (window.accessibilityManager) {
+            const info = window.accessibilityManager.getAccessibilityInfo();
+            
+            window.toastManager?.info(
+                'Информация о доступности',
+                `Настройки: ${Object.keys(info.settings).length}<br>Фокусируемых элементов: ${info.focusableElements}<br>Live regions: ${info.liveRegions}<br>Skip links: ${info.skipLinks}<br>Горячих клавиш: ${info.keyboardShortcuts}`,
+                8000
+            );
+            
+            // Запускаем тест доступности
+            this.runAccessibilityTests();
+        }
+    }
+
+    toggleHighContrast() {
+        if (window.accessibilityManager) {
+            const currentSetting = window.accessibilityManager.settings.enableHighContrast;
+            window.accessibilityManager.updateSetting('enableHighContrast', !currentSetting);
+            
+            const status = !currentSetting ? 'включен' : 'отключен';
+            window.toastManager?.info(
+                'Высокий контраст',
+                `Режим высокого контраста ${status}`,
+                3000
+            );
+        }
+    }
+
+    toggleLargeText() {
+        if (window.accessibilityManager) {
+            const currentSetting = window.accessibilityManager.settings.enableLargeText;
+            window.accessibilityManager.updateSetting('enableLargeText', !currentSetting);
+            
+            const status = !currentSetting ? 'включен' : 'отключен';
+            window.toastManager?.info(
+                'Большой текст',
+                `Режим большого текста ${status}`,
+                3000
+            );
+        }
+    }
+
+    showKeyboardShortcuts() {
+        if (window.accessibilityManager) {
+            window.accessibilityManager.showHelp();
+        }
+    }
+
+    runAccessibilityTests() {
+        const tests = [
+            { name: 'ARIA Labels', test: () => this.testARIALabels() },
+            { name: 'Focus Management', test: () => this.testFocusManagement() },
+            { name: 'Keyboard Navigation', test: () => this.testKeyboardNavigation() },
+            { name: 'Color Contrast', test: () => this.testColorContrast() },
+            { name: 'Screen Reader', test: () => this.testScreenReader() }
+        ];
+
+        let passed = 0;
+        let failed = 0;
+        let warnings = 0;
+
+        tests.forEach((test, index) => {
+            setTimeout(() => {
+                try {
+                    const result = test.test();
+                    if (result === 'pass') passed++;
+                    else if (result === 'fail') failed++;
+                    else if (result === 'warning') warnings++;
+                    
+                    // Показываем результат
+                    this.showAccessibilityTestResult(test.name, result);
+                    
+                    // Обновляем общий результат
+                    if (index === tests.length - 1) {
+                        this.showAccessibilitySummary(passed, failed, warnings);
+                    }
+                } catch (error) {
+                    console.error(`Accessibility test failed: ${test.name}`, error);
+                    failed++;
+                }
+            }, index * 1000);
+        });
+    }
+
+    testARIALabels() {
+        const elementsWithoutLabels = document.querySelectorAll('button:not([aria-label]):empty, a:not([aria-label]):empty, img:not([alt])');
+        const hasIssues = elementsWithoutLabels.length > 0;
+        
+        if (hasIssues) {
+            console.warn('ARIA Labels test: Found elements without proper labels', elementsWithoutLabels);
+            return 'warning';
+        }
+        
+        return 'pass';
+    }
+
+    testFocusManagement() {
+        const focusableElements = document.querySelectorAll('button, a, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        const hasFocusableElements = focusableElements.length > 0;
+        
+        if (!hasFocusableElements) {
+            return 'fail';
+        }
+        
+        return 'pass';
+    }
+
+    testKeyboardNavigation() {
+        // Проверяем наличие keyboard shortcuts
+        if (window.accessibilityManager && window.accessibilityManager.keyboardShortcuts.size > 0) {
+            return 'pass';
+        }
+        
+        return 'warning';
+    }
+
+    testColorContrast() {
+        // Простая проверка цветов
+        const hasHighContrast = document.body.classList.contains('high-contrast');
+        
+        if (hasHighContrast) {
+            return 'pass';
+        }
+        
+        return 'warning';
+    }
+
+    testScreenReader() {
+        // Проверяем наличие live regions
+        const liveRegions = document.querySelectorAll('[aria-live]');
+        
+        if (liveRegions.length > 0) {
+            return 'pass';
+        }
+        
+        return 'warning';
+    }
+
+    showAccessibilityTestResult(testName, result) {
+        const status = result === 'pass' ? '✅' : result === 'fail' ? '❌' : '⚠️';
+        const message = `${status} ${testName}: ${result}`;
+        
+        window.toastManager?.info(
+            'Тест доступности',
+            message,
+            3000
+        );
+        
+        console.log(`Accessibility Test: ${testName} - ${result}`);
+    }
+
+    showAccessibilitySummary(passed, failed, warnings) {
+        const total = passed + failed + warnings;
+        const message = `Результаты тестирования:<br>✅ Пройдено: ${passed}<br>❌ Провалено: ${failed}<br>⚠️ Предупреждения: ${warnings}<br>📊 Всего: ${total}`;
+        
+        window.toastManager?.info(
+            'Результаты тестирования доступности',
+            message,
+            8000
+        );
+        
+        // Показываем рекомендации
+        if (failed > 0) {
+            this.showAccessibilityRecommendations();
+        }
+    }
+
+    showAccessibilityRecommendations() {
+        const recommendations = [
+            'Добавьте ARIA labels к элементам без текста',
+            'Проверьте контрастность цветов',
+            'Убедитесь, что все элементы доступны с клавиатуры',
+            'Добавьте alt атрибуты к изображениям',
+            'Проверьте focus management в модальных окнах'
+        ];
+        
+        const recommendationsText = recommendations.map(rec => `• ${rec}`).join('<br>');
+        
+        window.toastManager?.warning(
+            'Рекомендации по улучшению доступности',
+            recommendationsText,
+            10000
+        );
     }
 
     // Остановка модуля
